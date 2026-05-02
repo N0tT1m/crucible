@@ -85,18 +85,22 @@ Hello-world. `argparse` + Anthropic SDK. Flags: `--system`, `--user`, `--model`,
 ### A2. `payload-vault` — versioned attack library
 YAML files, one per attack: `{id, name, category, template, references, tags}`. Loadable as a Python package with `vault.get("category=jailbreak")`.
 **Produces:** `Payload` dataclass + `PayloadLoader`. Now A1 can `--payload <id>` instead of typed strings.
+**Concepts:** [`docs/concepts/A2-payload-vault.md`](docs/concepts/A2-payload-vault.md) — schema, why technique vs. harm-probe split, vault commands.
 
 ### A3. `obfuscator` — payload mutator
 Pure transformations: base64, ROT13, leetspeak, zero-width unicode, homoglyphs, reversed, char-splitting (`p-r-o-m-p-t`), low-resource language translation.
 **Produces:** `Mutator` interface (`mutate(payload) -> list[Payload]`). A1 grows a `--mutate` flag.
+**Concepts:** [`docs/concepts/A3-obfuscator.md`](docs/concepts/A3-obfuscator.md) — what each transform exploits, when chaining helps, expected behavior per homelab model.
 
 ### A4. `refusal-judge` — outcome classifier
 Stage 1: regex heuristics ("I cannot", "I'm sorry"). Stage 2: LLM judge with strict rubric returning `{verdict, confidence, reasoning}`.
 **Produces:** `Judge` interface. Now you can run A1 + A2 + A4 together to score a whole vault.
+**Concepts:** [`docs/concepts/A4-refusal-judge.md`](docs/concepts/A4-refusal-judge.md) — the four verdicts, why two stages, judge model picks, anti-patterns.
 
 ### A5. `drift-tracker` — daily refusal-rate monitor
 Cron job runs the entire vault against multiple models, stores results in SQLite, charts refusal-rate over time.
 **Produces:** `ResultsStore` (SQLite schema for runs/payloads/responses/verdicts) + `Reporter` interface. This becomes the **shared data layer** for everything downstream.
+**Concepts:** [`docs/concepts/A5-results-store.md`](docs/concepts/A5-results-store.md) — schema, why version payloads, useful SQL queries, when SQLite stops being enough.
 
 ### A6. `many-shot-forge` — context flooding
 Generates fake `[user/assistant/user/assistant/...]` histories where the assistant already complied. Configurable shots (10/50/200).
@@ -297,6 +301,7 @@ H1–H4 unified. Run on schedule (A5 cron). Track behavior drift across model ve
 ### I1. `bench-runner` — parallel async runner
 `asyncio` + `httpx`. Hits N targets × M payloads. Backpressure, retries, rate limits per provider. Writes to A5's SQLite store.
 **Produces:** Core execution engine. Every category above runs through this.
+**Concepts:** [`docs/concepts/I1-parallel-runner.md`](docs/concepts/I1-parallel-runner.md) — per-target backpressure, retry policy, crash resumability, Tier 1 checkpoint.
 
 ### I2. `judge-ensemble` — multi-judge voting
 Wraps A4 + C4 + F3 + H1's judges. Voting/consensus modes. Reduces single-judge bias.
