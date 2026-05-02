@@ -1,12 +1,20 @@
 # Multi-stage build for redboxq.
+#
+# Builds against the vendored dependencies — the docker build never
+# reaches out to proxy.golang.org so corporate proxies / flaky networks
+# don't break it. Run `go mod vendor` after every dep change.
 
 FROM golang:1.23-alpine AS build
 WORKDIR /src
 
-# Pin deps in their own layer so iteration on source doesn't re-download.
-COPY go.mod go.sum ./
-RUN go mod download
+# Belt-and-suspenders: if vendor/ is somehow missing, allow direct
+# fallback when the public proxy is unreachable.
+ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOSUMDB=sum.golang.org
+ENV GOFLAGS=-mod=vendor
 
+COPY go.mod go.sum ./
+COPY vendor ./vendor
 COPY cmd ./cmd
 COPY internal ./internal
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/redboxq ./cmd/redboxq
