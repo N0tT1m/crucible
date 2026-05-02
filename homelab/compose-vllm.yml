@@ -1,0 +1,116 @@
+# vLLM serving Qwen3-32B for the redlab.
+#
+# Why this model on a 5090:
+#   - 32GB VRAM = ideal for 32B class models
+#   - Qwen3-32B at FP8 fits with ~6GB headroom for KV cache + 32k context
+#   - Native tool calling (works with the redlab-agent out of the box)
+#   - Frontier-class capability + recent RLHF — interesting to attack
+#
+# Why NOT the alternatives:
+#   - Llama 3.3-70B (even at AWQ-Int4) is ~40GB, won't fit cleanly. Spills
+#     to system RAM, tanks throughput. Use a 2x GPU box for 70B.
+#   - Mistral Small 3 (24B) — fits trivially, but less capable than Qwen3-32B.
+#   - Gemma 3 27B — fits, weaker tool calling.
+#   - DeepSeek-R1-Distill-32B — fits, great as a SECOND target for reasoning
+#     attacks. See the commented-out service below.
+#
+# Why vLLM over Ollama:
+#   - Continuous batching → 10–50× higher throughput on red team batch runs
+#   - Native prefix caching → repeated system prompts cost almost nothing
+#   - Real OpenAI-compatible API including logprobs (useful for K3 attacks)
+#   - FP8 / AWQ Marlin kernels tuned for Blackwell
+#
+# Run:
+#   docker compose -f compose-vllm.yml up -d
+#   curl http://localhost:8001/v1/models
+#
+# To use with the redlab-agent, set agent's OLLAMA_URL to vLLM is NOT correct
+# — vLLM uses OpenAI's chat schema, not Ollama's. Either:
+#   (a) keep ollama for the agent (small models), use vLLM for batch evals, or
+#   (b) modify agent.py call_ollama() to hit vLLM via /v1/chat/completions, or
+#   (c) register vLLM under LiteLLM and have everything go through it.
+# See litellm-snippet.yaml at the bottom of this file for option (c).
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: redlab-vllm
+    restart: unless-stopped
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ipc: host                              # required for vLLM shared memory
+    volumes:
+      - hf-cache:/root/.cache/huggingface  # model cache survives restarts
+    ports:
+      - "8001:8000"                        # OpenAI-compatible API
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}      # only needed for gated models
+      - VLLM_LOGGING_LEVEL=INFO
+      - VLLM_USE_V1=1                              # vLLM v1 engine, faster
+    command: >
+      --model Qwen/Qwen3-32B
+      --served-model-name qwen3-32b
+      --quantization fp8
+      --kv-cache-dtype fp8
+      --max-model-len 32768
+      --max-num-seqs 32
+      --gpu-memory-utilization 0.92
+      --enable-prefix-caching
+      --enable-auto-tool-choice
+      --tool-call-parser hermes
+      --trust-remote-code
+      --host 0.0.0.0
+      --port 8000
+
+  # ---- OPTIONAL second target: DeepSeek-R1-Distill-Qwen-32B ----
+  # Run only if you have spare time/VRAM (you'd swap, not run both — 32B+32B
+  # won't fit). Comment out vllm above and uncomment this when you want a
+  # reasoning-model target for crescendo / chain-of-thought attacks.
+  #
+  # vllm-r1:
+  #   image: vllm/vllm-openai:latest
+  #   container_name: redlab-vllm-r1
+  #   restart: unless-stopped
+  #   runtime: nvidia
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   ipc: host
+  #   volumes:
+  #     - hf-cache:/root/.cache/huggingface
+  #   ports:
+  #     - "8002:8000"
+  #   command: >
+  #     --model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+  #     --served-model-name deepseek-r1-32b
+  #     --quantization fp8
+  #     --kv-cache-dtype fp8
+  #     --max-model-len 32768
+  #     --gpu-memory-utilization 0.92
+  #     --enable-prefix-caching
+  #     --trust-remote-code
+  #     --host 0.0.0.0
+  #     --port 8000
+
+volumes:
+  hf-cache:
+    driver: local
+
+# ---- LiteLLM snippet ----
+# Append this to your litellm.yaml so attacks go through one endpoint:
+#
+# - model_name: qwen3-32b
+#   litellm_params:
+#     model: openai/qwen3-32b
+#     api_base: http://vllm:8000/v1
+#     api_key: dummy

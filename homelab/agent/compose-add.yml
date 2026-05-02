@@ -1,0 +1,30 @@
+# Add this service block to your homelab/docker-compose.yml.
+#
+# Networks:
+#   - depends on `ollama` being on the default network (it is in the lab compose).
+#   - to fully isolate the agent from your real LAN, attach it to a Docker
+#     network created with `--internal` and bridge only to ollama.
+#
+# Example one-liner to create the isolated network:
+#   docker network create --internal redlab-agent-net
+#
+# Then add `redlab-agent-net` to both ollama and agent below.
+
+services:
+  agent:
+    build: ./agent
+    depends_on: [ollama]
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - MODEL=qwen2.5:32b           # change to whatever you've pulled
+      - MAX_TOOL_ITERATIONS=8
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount sandbox/outbox so you can inspect from host without docker exec.
+      - ./agent/sandbox:/app/sandbox
+      - ./agent/outbox:/app/outbox
+    # Resource caps — runaway agent stays bounded.
+    mem_limit: 2g
+    cpus: 2.0
+    restart: unless-stopped
