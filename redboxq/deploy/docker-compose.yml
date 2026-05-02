@@ -111,5 +111,30 @@ services:
       - CH_PASSWORD=
       - CH_DATABASE=mart
 
+  # Continuous mart refresher — keeps mart_* in sync with raw.attacks
+  # so the dashboard auto-updates without a manual `dbt run` after every
+  # bench. Default tick is 30s; tune via REFRESH_INTERVAL.
+  dbt-refresh:
+    image: ghcr.io/dbt-labs/dbt-clickhouse:1.8.latest
+    container_name: redboxq-dbt-refresh
+    restart: unless-stopped
+    depends_on:
+      ch-migrate:
+        condition: service_completed_successfully
+    working_dir: /usr/app/dbt
+    volumes:
+      - ../dbt:/usr/app/dbt
+      - ./dbt-refresh.sh:/usr/local/bin/dbt-refresh.sh:ro
+    environment:
+      - DBT_PROFILES_DIR=/usr/app/dbt
+      - CH_HOST=clickhouse
+      - CH_PORT=9000
+      - CH_USER=default
+      - CH_PASSWORD=
+      - CH_DATABASE=mart
+      - REFRESH_INTERVAL=30
+      # DBT_RUN_FLAGS=--threads 1   # uncomment if you hit dbt-clickhouse races
+    entrypoint: ["/bin/sh", "/usr/local/bin/dbt-refresh.sh"]
+
 volumes:
   ch-data:
