@@ -1,0 +1,29 @@
+# Force LF line endings on files that are read by shells, docker, or
+# ClickHouse. Otherwise Windows clients commit CRLF and break things
+# silently — `sh -c` chokes on \r at end of line, ClickHouse SQL
+# parsing has been seen to mis-tokenise on \r.
+
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.go   text eol=lf
+*.py   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.csv  text eol=lf
+
+Dockerfile     text eol=lf
+docker-compose* text eol=lf
+Makefile       text eol=lf
+go.mod         text eol=lf
+go.sum         text eol=lf
+.env*          text eol=lf
+
+# Binary files we don't want git to touch
+*.png   binary
+*.jpg   binary
+*.svg   binary
