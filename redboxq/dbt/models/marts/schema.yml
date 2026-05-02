@@ -39,9 +39,5 @@ models:
 
   - name: mart_refusal_rate
     description: Daily refusal/comply/partial percentages.
-    columns:
-      - name: refusal_rate
-        tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 1
+    # The [0, 1] range check lives in dbt/tests/refusal_rate_in_range.sql
+    # so we don't have to depend on the dbt_utils package.
