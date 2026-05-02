@@ -114,8 +114,13 @@ services:
   # Continuous mart refresher — keeps mart_* in sync with raw.attacks
   # so the dashboard auto-updates without a manual `dbt run` after every
   # bench. Default tick is 30s; tune via REFRESH_INTERVAL.
+  #
+  # Uses python:3.11-slim + pip install on first boot so we don't depend
+  # on a third-party dbt image that might be private / rate-limited.
+  # First boot takes ~30-60s for the pip install; subsequent restarts
+  # reuse the persisted dbt-venv volume.
   dbt-refresh:
-    image: ghcr.io/dbt-labs/dbt-clickhouse:1.8.latest
+    image: python:3.11-slim
     container_name: redboxq-dbt-refresh
     restart: unless-stopped
     depends_on:
@@ -125,6 +130,7 @@ services:
     volumes:
       - ../dbt:/usr/app/dbt
       - ./dbt-refresh.sh:/usr/local/bin/dbt-refresh.sh:ro
+      - dbt-venv:/opt/venv
     environment:
       - DBT_PROFILES_DIR=/usr/app/dbt
       - CH_HOST=clickhouse
@@ -133,8 +139,10 @@ services:
       - CH_PASSWORD=
       - CH_DATABASE=mart
       - REFRESH_INTERVAL=30
+      - PIP_DISABLE_PIP_VERSION_CHECK=1
       # DBT_RUN_FLAGS=--threads 1   # uncomment if you hit dbt-clickhouse races
     entrypoint: ["/bin/sh", "/usr/local/bin/dbt-refresh.sh"]
 
 volumes:
   ch-data:
+  dbt-venv:
