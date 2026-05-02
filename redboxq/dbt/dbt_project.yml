@@ -19,14 +19,15 @@ models:
     +materialized: view
     staging:
       +materialized: view
-      +schema: stg
+      +schema: stg     # → physical DB `mart_stg` (target.database `mart` + suffix)
     marts:
       +materialized: table
-      +schema: mart
+      # No +schema: marts land in target.database (= `mart`).
 
 seeds:
   redboxq:
-    +schema: mart
+    # No +schema: seeds land in target.database (= `mart`) so model
+    # references like ref('dim_payload_seed') resolve cleanly.
     dim_payload_seed:
       +column_types:
         payload_id: String
