@@ -44,12 +44,14 @@ func Load() (*Config, error) {
 		Vol:        env("REDBOXQ_VOLUME", "I"),
 		IssueBase:  time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
 	}
-	c.CH.Addr = env("REDBOXQ_CH_ADDR", "localhost:9000")
+	// Default to the redboxq host port (9001), not the ClickHouse default (9000)
+	// — :9000 is taken by mommy-smoothies-morning-milking on the empire stack.
+	c.CH.Addr = env("REDBOXQ_CH_ADDR", "localhost:9001")
 	c.CH.Database = env("REDBOXQ_CH_DATABASE", "mart")
 	c.CH.Username = env("REDBOXQ_CH_USERNAME", "default")
 	c.CH.Password = env("REDBOXQ_CH_PASSWORD", "")
 
-	c.OTLP.Endpoint = env("REDBOXQ_OTLP_ENDPOINT", "")
+	c.OTLP.Endpoint = env("REDBOXQ_OTLP_ENDPOINT", "localhost:4327")
 	c.OTLP.Service = c.Service
 
 	tickStr := env("REDBOXQ_ALERT_TICK", "30s")
