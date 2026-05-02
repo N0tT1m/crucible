@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
-from redbox.core.types import Result
+from core.types import Result
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (

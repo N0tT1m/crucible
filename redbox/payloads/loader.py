@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from redbox.core.types import Payload
+from core.types import Payload
 
 DEFAULT_VAULT = Path(__file__).parent / "vault"
 

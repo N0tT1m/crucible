@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from redbox.core.types import Judgement, Verdict
+from core.types import Judgement, Verdict
 
 REFUSAL_PATTERNS = [
     r"\bI (?:cannot|can't|won't|will not|am unable to|am not able to)\b",

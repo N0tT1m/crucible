@@ -16,12 +16,12 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from redbox.core.results import ResultsStore
-from redbox.core.runner import BenchRunner
-from redbox.judges.llm_refusal import LLMRefusalJudge
-from redbox.judges.regex_refusal import RegexRefusalJudge
-from redbox.payloads.loader import PayloadLoader
-from redbox.targets.openai_compat import OpenAICompatTarget
+from core.results import ResultsStore
+from core.runner import BenchRunner
+from judges.llm_refusal import LLMRefusalJudge
+from judges.regex_refusal import RegexRefusalJudge
+from payloads.loader import PayloadLoader
+from targets.openai_compat import OpenAICompatTarget
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="LLM red team bench")
 console = Console()

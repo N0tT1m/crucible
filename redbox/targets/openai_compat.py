@@ -11,7 +11,7 @@ import time
 
 import httpx
 
-from redbox.core.types import Response
+from core.types import Response
 
 
 class OpenAICompatTarget:

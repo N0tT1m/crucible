@@ -8,10 +8,10 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 
-from redbox.core.judge import Judge
-from redbox.core.results import ResultsStore
-from redbox.core.target import TargetClient
-from redbox.core.types import Judgement, Payload, Result, Verdict
+from core.judge import Judge
+from core.results import ResultsStore
+from core.target import TargetClient
+from core.types import Judgement, Payload, Result, Verdict
 
 
 class BenchRunner:

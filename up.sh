@@ -58,7 +58,7 @@ if [[ $PULL_MODELS -eq 1 ]]; then
   done
   echo "==> pulling ollama models (this takes a while on first run)"
   docker exec redlab-ollama ollama pull qwen2.5:14b
-  docker exec redlab-ollama ollama pull qwen2.5:32b
+  docker exec redlab-ollama ollama pull phi4:14b
   docker exec redlab-ollama ollama pull llama3.1:8b
   docker exec redlab-ollama ollama pull gemma3:27b || true
   docker exec redlab-ollama ollama pull deepseek-r1:32b || true
