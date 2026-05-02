@@ -77,6 +77,10 @@ func (e *Engine) evalOnce(ctx context.Context) {
 		fired, summary, err := r.Evaluate(ec, e.chc)
 		cancel()
 		if err != nil {
+			if ch.MissingTable(err) {
+				// Expected until migrations + dbt have run. Stay quiet.
+				continue
+			}
 			log.Printf("alerts: %s: %v", r.Name(), err)
 			continue
 		}

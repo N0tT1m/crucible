@@ -39,16 +39,57 @@ func Open(addr, database, user, pass string) (*Client, error) {
 func (c *Client) Close() error { return c.conn.Close() }
 
 // hasLimit returns true if upper-cased SQL already has a top-level LIMIT.
-// Naive but works for our queries — we don't have subqueries with LIMIT
-// that would confuse it.
 func hasLimit(upperSQL string) bool {
-	// Strip a trailing semicolon if any.
 	s := strings.TrimRight(strings.TrimSpace(upperSQL), ";")
-	// Last 100 chars are enough to find a tail LIMIT clause.
 	if len(s) > 100 {
 		s = s[len(s)-100:]
 	}
 	return strings.Contains(s, "LIMIT ") || strings.HasSuffix(s, "LIMIT")
+}
+
+// MissingTable reports whether err is the "table/database doesn't exist"
+// error. Used to differentiate the "before first dbt build" state from
+// real errors so we can stay quiet about it.
+func MissingTable(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "Unknown table") ||
+		strings.Contains(s, "Database ") && strings.Contains(s, "doesn't exist") ||
+		strings.Contains(s, "code: 60") ||
+		strings.Contains(s, "code: 81")
+}
+
+// TablesReady reports which key tables are present. The dashboard uses
+// this to nudge the user toward `dbt build` on first boot instead of
+// silently rendering zeros.
+type Readiness struct {
+	RawAttacks      bool
+	FactAttack      bool
+	DimPayload      bool
+	DimModel        bool
+	FactCanaryHit   bool
+	OtelTraces      bool
+}
+
+func (c *Client) Readiness(ctx context.Context) Readiness {
+	check := func(db, name string) bool {
+		var n uint64
+		err := c.conn.QueryRow(ctx,
+			"SELECT count() FROM system.tables WHERE database = ? AND name = ?",
+			db, name,
+		).Scan(&n)
+		return err == nil && n > 0
+	}
+	return Readiness{
+		RawAttacks:    check("raw", "attacks"),
+		FactAttack:    check("mart", "fact_attack"),
+		DimPayload:    check("mart", "dim_payload"),
+		DimModel:      check("mart", "dim_model"),
+		FactCanaryHit: check("mart", "fact_canary_hit"),
+		OtelTraces:    check("raw", "otel_traces"),
+	}
 }
 
 // Conn returns the underlying driver.Conn for callers that need it

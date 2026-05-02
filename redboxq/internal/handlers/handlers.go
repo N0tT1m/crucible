@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -111,10 +112,15 @@ type homeData struct {
 		PctRef   float64
 		LastSeen time.Time
 	}
-	Targets   []targetCard
-	Recent    []ch.AttackRow
-	Canaries  []ch.CanaryRow
-	Drift     driftHeadline
+	Targets  []targetCard
+	Recent   []ch.AttackRow
+	Canaries []ch.CanaryRow
+	Drift    driftHeadline
+
+	// FirstRun is true when the marts don't exist yet — we render a
+	// nudge to run `dbt build` instead of silently showing zeros.
+	FirstRun     bool
+	Readiness    ch.Readiness
 }
 
 type targetCard struct {
@@ -136,12 +142,27 @@ func (d *Deps) Home(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := reqCtx(r)
 	defer cancel()
 
-	stats, _ := d.CH.FrontStats(ctx)
-	cards, _ := d.CH.TargetCards(ctx)
-	recent, _ := d.CH.RecentAttacks(ctx, 10)
-	canaries, _ := d.CH.RecentCanaries(ctx, 24*time.Hour)
+	readiness := d.CH.Readiness(ctx)
 
-	page := homeData{shell: d.shell("/")}
+	var (
+		stats    ch.FrontStats
+		cards    []ch.TargetCard
+		recent   []ch.AttackRow
+		canaries []ch.CanaryRow
+	)
+	if readiness.FactAttack {
+		stats, _ = d.CH.FrontStats(ctx)
+		recent, _ = d.CH.RecentAttacks(ctx, 10)
+	}
+	if readiness.DimModel {
+		cards, _ = d.CH.TargetCards(ctx)
+	}
+	if readiness.FactCanaryHit {
+		canaries, _ = d.CH.RecentCanaries(ctx, 24*time.Hour)
+	}
+
+	page := homeData{shell: d.shell("/"), Readiness: readiness}
+	page.FirstRun = !(readiness.FactAttack && readiness.DimModel)
 	page.Stats.Runs = stats.RunsToday
 	page.Stats.Attacks = stats.AttacksToday
 	page.Stats.Errors = stats.Errors
@@ -161,10 +182,14 @@ func (d *Deps) Home(w http.ResponseWriter, r *http.Request) {
 	page.Kicker = fmt.Sprintf("Filed at %s — last attack at %s",
 		page.shell.FiledTime, fmtTime(stats.LastAttackTS))
 	switch {
+	case page.FirstRun:
+		page.Headline = `The forge is <em>cold</em>.`
+		page.Subhead = "First boot — the marts haven't been built yet. Run dbt to populate the dispatch."
+		page.ArticleHTML = firstRunArticle(readiness)
 	case stats.AttacksToday == 0:
 		page.Headline = `The bench is <em>empty</em>.`
 		page.Subhead = "No attacks recorded today. Run a bench to populate the dispatch."
-		page.ArticleHTML = `<p>The forge is cold. There's nothing to report.</p>`
+		page.ArticleHTML = `<p>The forge is hot but no attacks have landed today. Run <code>redbox bench</code>.</p>`
 	default:
 		page.Headline = fmt.Sprintf(`Today's <em>yield</em>: %d attacks across %d runs.`,
 			stats.AttacksToday, stats.RunsToday)
@@ -174,6 +199,52 @@ func (d *Deps) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	d.Render(w, "home", page)
+}
+
+func firstRunArticle(r ch.Readiness) string {
+	missing := []string{}
+	if !r.RawAttacks {
+		missing = append(missing, "<code>raw.attacks</code>")
+	}
+	if !r.FactAttack {
+		missing = append(missing, "<code>mart.fact_attack</code>")
+	}
+	if !r.DimModel {
+		missing = append(missing, "<code>mart.dim_model</code>")
+	}
+	if !r.DimPayload {
+		missing = append(missing, "<code>mart.dim_payload</code>")
+	}
+	missingHTML := ""
+	if len(missing) > 0 {
+		missingHTML = "<p><em>Missing tables:</em> " + strings.Join(missing, ", ") + ".</p>"
+	}
+	return missingHTML + `
+<p>The data plane is up but the marts haven't been built. To finish first-time setup:</p>
+
+<h2>1. Apply migrations</h2>
+<p>If <code>raw.attacks</code> is missing, the migrations didn't run on first boot. From the host:</p>
+<pre><code>cd redboxq
+docker compose -f deploy/docker-compose.yml down -v
+docker compose -f deploy/docker-compose.yml up -d</code></pre>
+
+<h2>2. Build dbt models</h2>
+<pre><code>cd redboxq/dbt
+cp profiles.yml.example profiles.yml
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install dbt-clickhouse
+python3 ../scripts/seed_dim_payload.py \
+  --vault ../../redbox/payloads/vault \
+  --out  seeds/dim_payload_seed.csv
+dbt seed &amp;&amp; dbt run</code></pre>
+
+<h2>3. Land at least one attack</h2>
+<pre><code>REDBOXQ_CH_URL=http://localhost:8124 \
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4327 \
+  redbox bench -m claude-haiku --judge regex
+cd redboxq/dbt &amp;&amp; dbt run</code></pre>
+
+<p>Then reload this page.</p>`
 }
 
 func articleSummary(s ch.FrontStats, targets, canaries int) string {
@@ -207,9 +278,8 @@ func (d *Deps) AttacksList(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	limit := atoiDefault(r.URL.Query().Get("limit"), 200)
 	rows, err := d.CH.RecentAttacks(ctx, limit)
-	if err != nil {
-		http.Error(w, "ch: "+err.Error(), 500)
-		return
+	if err != nil && !ch.MissingTable(err) {
+		log.Printf("attacks: %v", err)
 	}
 	d.Render(w, "attacks", attacksData{shell: d.shell("/attacks"), Limit: limit, Rows: rows})
 }
