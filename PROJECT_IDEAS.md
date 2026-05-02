@@ -80,6 +80,7 @@ The Python `redbox` core never imports from `proxies/` — it talks to them over
 ### A1. `inject-cli` — single-shot tester
 Hello-world. `argparse` + Anthropic SDK. Flags: `--system`, `--user`, `--model`, `--temp`. Prints response.
 **Produces:** `TargetClient` interface (one method: `send(messages) -> Response`).
+**Concepts:** [`docs/concepts/A1-inject-cli.md`](docs/concepts/A1-inject-cli.md) — what prompt injection is at the API level, what each dimension does, and where A1 plugs into the rest.
 
 ### A2. `payload-vault` — versioned attack library
 YAML files, one per attack: `{id, name, category, template, references, tags}`. Loadable as a Python package with `vault.get("category=jailbreak")`.
