@@ -354,17 +354,31 @@ func (d *Deps) ModelsList(w http.ResponseWriter, r *http.Request) {
 
 type modelDetailData struct {
 	shell
-	Name     string
-	Provider string
-	Family   string
+	Name      string
+	Found     bool
+	Detail    *ch.ModelDetail
+	Freshness string
 }
 
 func (d *Deps) ModelDetail(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := reqCtx(r)
+	defer cancel()
 	name := chi.URLParam(r, "name")
-	d.Render(w, "model_detail", modelDetailData{
+
+	page := modelDetailData{
 		shell: d.shell("/models"),
 		Name:  name,
-	})
+	}
+	detail, err := d.CH.ModelDetail(ctx, name)
+	if err != nil && !ch.MissingTable(err) {
+		log.Printf("model_detail %q: %v", name, err)
+	}
+	if detail != nil {
+		page.Found = true
+		page.Detail = detail
+		page.Freshness = ch.Freshness(detail.LastSeen)
+	}
+	d.Render(w, "model_detail", page)
 }
 
 // ── judges ───────────────────────────────────────────────────────────

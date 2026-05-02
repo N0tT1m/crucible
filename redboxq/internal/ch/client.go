@@ -264,6 +264,221 @@ func (c *Client) TargetCards(ctx context.Context) ([]TargetCard, error) {
 	return out, rows.Err()
 }
 
+// ── single target detail ─────────────────────────────────────────────
+
+type ModelMeta struct {
+	Name           string
+	Provider       string
+	Family         string
+	ParameterClass string
+	Local          bool
+	AddedOn        time.Time
+}
+
+type RefusalDayPoint struct {
+	Day         time.Time
+	Attempts    uint64
+	Refused     uint64
+	Complied    uint64
+	RefusalRate float64
+}
+
+type PayloadStat struct {
+	PayloadID      string
+	Name           string
+	Category       string
+	Attempts       uint64
+	Complied       uint64
+	ComplianceRate float64
+}
+
+type ModelDetail struct {
+	Meta              ModelMeta
+	AttacksToday      uint64
+	AttacksTotal      uint64
+	RefusedToday      uint64
+	RefusalToday      float64
+	Refusal14d        float64
+	ErrorsToday       uint64
+	CostToday         float64
+	LastSeen          time.Time
+	Timeline          []RefusalDayPoint
+	TopComplying      []PayloadStat
+	Recent            []AttackRow
+	Fingerprints      []string
+}
+
+// Detail returns everything the model_detail page needs.
+// Returns (nil, nil) when the model isn't in dim_model — caller renders 404.
+func (c *Client) ModelDetail(ctx context.Context, name string) (*ModelDetail, error) {
+	d := &ModelDetail{}
+
+	// 1. metadata. If not found, return nil so handler can 404.
+	mrow := c.conn.QueryRow(ctx, `
+		SELECT model_name, provider, family, parameter_class, local, added_on
+		FROM mart.dim_model WHERE model_name = ? LIMIT 1
+	`, name)
+	if err := mrow.Scan(
+		&d.Meta.Name, &d.Meta.Provider, &d.Meta.Family,
+		&d.Meta.ParameterClass, &d.Meta.Local, &d.Meta.AddedOn,
+	); err != nil {
+		// "no rows" pattern in clickhouse-go: just return nil
+		if strings.Contains(err.Error(), "no rows") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("dim_model: %w", err)
+	}
+
+	// 2. headline numbers (today + 14d)
+	hrow := c.conn.QueryRow(ctx, `
+		SELECT
+			countIf(ts >= today())                                   AS today,
+			countIf(verdict = 'refused' AND ts >= today())           AS refused_today,
+			countIf(error != '' AND ts >= today())                   AS errs_today,
+			sumIf(coalesce(usd_at_attack, 0), ts >= today())         AS cost_today,
+			count()                                                   AS total,
+			countIf(verdict = 'refused' AND ts >= today())
+				/ nullIf(countIf(ts >= today()), 0)                   AS pct_today,
+			countIf(verdict = 'refused' AND ts >= today() - 14)
+				/ nullIf(countIf(ts >= today() - 14), 0)              AS pct_14d,
+			max(ts)                                                   AS last_seen
+		FROM mart.fact_attack
+		WHERE model = ?
+	`, name)
+	var pctToday, pct14d, costToday *float64
+	var lastSeen *time.Time
+	if err := hrow.Scan(
+		&d.AttacksToday, &d.RefusedToday, &d.ErrorsToday, &costToday,
+		&d.AttacksTotal, &pctToday, &pct14d, &lastSeen,
+	); err != nil {
+		return nil, fmt.Errorf("headline: %w", err)
+	}
+	if pctToday != nil {
+		d.RefusalToday = *pctToday
+	}
+	if pct14d != nil {
+		d.Refusal14d = *pct14d
+	}
+	if costToday != nil {
+		d.CostToday = *costToday
+	}
+	if lastSeen != nil {
+		d.LastSeen = *lastSeen
+	}
+
+	// 3. timeline — last 30 days, refusal rate per day
+	rows, err := c.conn.Query(ctx, `
+		SELECT
+			day,
+			count()                                              AS attempts,
+			countIf(verdict = 'refused')                         AS refused,
+			countIf(verdict = 'complied')                        AS complied,
+			countIf(verdict = 'refused') / nullIf(count(), 0)    AS refusal_rate
+		FROM mart.fact_attack
+		WHERE model = ? AND day >= today() - 30
+		GROUP BY day
+		ORDER BY day
+	`, name)
+	if err != nil {
+		return nil, fmt.Errorf("timeline: %w", err)
+	}
+	for rows.Next() {
+		var p RefusalDayPoint
+		var rate *float64
+		if err := rows.Scan(&p.Day, &p.Attempts, &p.Refused, &p.Complied, &rate); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if rate != nil {
+			p.RefusalRate = *rate
+		}
+		d.Timeline = append(d.Timeline, p)
+	}
+	rows.Close()
+
+	// 4. top-complying payloads against this model in the last 14d
+	rows, err = c.conn.Query(ctx, `
+		SELECT
+			a.payload_id,
+			any(p.name)                              AS name,
+			any(p.category)                          AS category,
+			count()                                  AS attempts,
+			countIf(a.verdict = 'complied')          AS complied,
+			countIf(a.verdict = 'complied') / nullIf(count(), 0) AS compliance_rate
+		FROM mart.fact_attack a
+		LEFT JOIN mart.dim_payload p USING (payload_id)
+		WHERE a.model = ? AND a.day >= today() - 14
+		GROUP BY a.payload_id
+		ORDER BY compliance_rate DESC, attempts DESC
+		LIMIT 10
+	`, name)
+	if err != nil {
+		return nil, fmt.Errorf("top complying: %w", err)
+	}
+	for rows.Next() {
+		var s PayloadStat
+		var rate *float64
+		if err := rows.Scan(&s.PayloadID, &s.Name, &s.Category, &s.Attempts, &s.Complied, &rate); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if rate != nil {
+			s.ComplianceRate = *rate
+		}
+		d.TopComplying = append(d.TopComplying, s)
+	}
+	rows.Close()
+
+	// 5. recent attacks against this target
+	rows, err = c.conn.Query(ctx, `
+		SELECT ts, run_id, target_name, payload_id, model, verdict,
+		       latency_ms, input_tokens, output_tokens,
+		       judge_name, confidence, error
+		FROM mart.fact_attack
+		WHERE model = ?
+		ORDER BY ts DESC
+		LIMIT 30
+	`, name)
+	if err != nil {
+		return nil, fmt.Errorf("recent: %w", err)
+	}
+	for rows.Next() {
+		var r AttackRow
+		if err := rows.Scan(
+			&r.TS, &r.RunID, &r.Target, &r.Payload, &r.Model, &r.Verdict,
+			&r.LatencyMs, &r.InTokens, &r.OutTokens,
+			&r.JudgeName, &r.Conf, &r.Error,
+		); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		d.Recent = append(d.Recent, r)
+	}
+	rows.Close()
+
+	// 6. distinct fingerprints seen — surfaces silent rotations
+	rows, err = c.conn.Query(ctx, `
+		SELECT DISTINCT model_fingerprint
+		FROM mart.fact_attack
+		WHERE model = ? AND model_fingerprint != ''
+		ORDER BY model_fingerprint
+	`, name)
+	if err != nil {
+		return nil, fmt.Errorf("fingerprints: %w", err)
+	}
+	for rows.Next() {
+		var fp string
+		if err := rows.Scan(&fp); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		d.Fingerprints = append(d.Fingerprints, fp)
+	}
+	rows.Close()
+
+	return d, nil
+}
+
 // Freshness buckets a last-seen timestamp.
 func Freshness(last time.Time) string {
 	if last.IsZero() {

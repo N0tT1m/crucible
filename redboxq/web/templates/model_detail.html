@@ -1,17 +1,200 @@
-{{/* model_detail.html — per-target drill-down. SCAFFOLD ONLY. */}}
-
 {{ define "title" }}{{ .Name }} — Targets — The Crucible Dispatch{{ end }}
 
 {{ define "content" }}
+
+{{ if not .Found }}
+  <div class="section-head">
+    <h2>Target <em>{{ .Name }}</em></h2>
+    <p class="blurb">Not in <code>mart.dim_model</code>.</p>
+  </div>
+  <div class="cold">
+    No row in <code>dim_model</code> for <code>{{ .Name }}</code>.
+    <div class="note">Add it to <code>seeds/dim_model_seed.csv</code> and rerun <code>dbt seed</code>.</div>
+  </div>
+{{ else }}
+
 <div class="section-head">
-  <h2>{{ .Name }}</h2>
-  <p class="blurb">{{ .Provider }} · {{ .Family }}</p>
+  <h2>{{ .Detail.Meta.Name }}</h2>
+  <p class="blurb">
+    <span class="mono">{{ .Detail.Meta.Provider }}</span> ·
+    {{ .Detail.Meta.Family }} ·
+    class <span class="mono">{{ .Detail.Meta.ParameterClass }}</span>
+    {{ if .Detail.Meta.Local }} · <span class="pill ok">local</span>
+    {{ else }} · <span class="pill muted">frontier</span>{{ end }}
+    {{ if .Freshness }} · <span class="dot {{ .Freshness }}"></span> {{ .Freshness }}{{ end }}
+  </p>
 </div>
 
-{{/* TODO sections:
-       1. headline figures (refusal rate today vs 14d, attacks today, cost today)
-       2. refusal-rate timeline (canvas sparkline, oxblood)
-       3. common-failure payloads (which attacks land most)
-       4. recent attacks ledger filtered to this target                       */}}
-<div class="cold"><em>Target detail not implemented yet.</em></div>
+{{/* ── headline figures ─────────────────────────────────────────── */}}
+<div class="row-flex" style="align-items: stretch; gap: 1.25rem;">
+
+  <section class="boxout" style="flex:1; min-width:200px;">
+    <h4>Refusal — today</h4>
+    <div class="figure ox">{{ pct .Detail.RefusalToday }}</div>
+    <span class="label">{{ .Detail.RefusedToday }} of {{ .Detail.AttacksToday }}</span>
+  </section>
+
+  <section class="boxout" style="flex:1; min-width:200px;">
+    <h4>Refusal — 14d</h4>
+    <div class="figure">{{ pct .Detail.Refusal14d }}</div>
+    <span class="label">trailing baseline</span>
+  </section>
+
+  <section class="boxout" style="flex:1; min-width:200px;">
+    <h4>Attacks — total</h4>
+    <div class="figure">{{ thousands .Detail.AttacksTotal }}</div>
+    <span class="label">all time</span>
+  </section>
+
+  <section class="boxout" style="flex:1; min-width:200px;">
+    <h4>Cost — today</h4>
+    <div class="figure lip">${{ fnum .Detail.CostToday 4 }}</div>
+    <span class="label">{{ .Detail.ErrorsToday }} error(s)</span>
+  </section>
+
+</div>
+
+{{/* ── refusal-rate trend (last 30 days) ─────────────────────── */}}
+<section style="margin-top: 2rem;">
+  <h3 style="font-family: var(--serif-display); font-style: italic; color: var(--ox); border-bottom: var(--hairline) solid var(--cream-edge); padding-bottom: 0.25rem;">
+    Refusal rate, last 30 days
+  </h3>
+
+  {{ if .Detail.Timeline }}
+    {{/* Inline sparkline. forge.js drawSparklines() picks up the canvas. */}}
+    {{ $vals := "" }}
+    {{ range $i, $p := .Detail.Timeline }}
+      {{ if $i }}{{ $vals = printf "%s,%.4f" $vals $p.RefusalRate }}{{ else }}{{ $vals = printf "%.4f" $p.RefusalRate }}{{ end }}
+    {{ end }}
+
+    <canvas data-sparkline="{{ $vals }}" data-color="#6b1422"
+            width="900" height="80" style="width:100%; max-width:900px; margin: 0.6rem 0 1rem;"></canvas>
+
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th class="num">Attempts</th>
+          <th class="num">Refused</th>
+          <th class="num">Complied</th>
+          <th class="num">Refusal rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .Detail.Timeline }}
+          <tr>
+            <td>{{ isodate .Day }}</td>
+            <td class="num">{{ .Attempts }}</td>
+            <td class="num">{{ .Refused }}</td>
+            <td class="num">{{ .Complied }}</td>
+            <td class="num">{{ pct .RefusalRate }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ else }}
+    <div class="cold">
+      No attacks against this target in the last 30 days.
+      <div class="note">Run <code>redbox bench -m {{ .Detail.Meta.Name }}</code>.</div>
+    </div>
+  {{ end }}
+</section>
+
+{{/* ── top-complying payloads ──────────────────────────────────── */}}
+<section style="margin-top: 2rem;">
+  <h3 style="font-family: var(--serif-display); font-style: italic; color: var(--ox); border-bottom: var(--hairline) solid var(--cream-edge); padding-bottom: 0.25rem;">
+    Top-landing payloads (14d)
+  </h3>
+  {{ if .Detail.TopComplying }}
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th>Payload</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th class="num">Attempts</th>
+          <th class="num">Complied</th>
+          <th class="num">Compliance rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .Detail.TopComplying }}
+          <tr>
+            <td><a href="/payloads/{{ .PayloadID }}">{{ .PayloadID }}</a></td>
+            <td>{{ .Name }}</td>
+            <td class="muted">{{ .Category }}</td>
+            <td class="num">{{ .Attempts }}</td>
+            <td class="num">{{ .Complied }}</td>
+            <td class="num">{{ pct .ComplianceRate }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem;">
+      The attacks that work hardest against this target — sorted by compliance rate.
+    </p>
+  {{ else }}
+    <div class="cold">No payloads complied in the last 14 days. (Either nothing's been tested, or the model is holding up.)</div>
+  {{ end }}
+</section>
+
+{{/* ── recent attacks ──────────────────────────────────────────── */}}
+<section style="margin-top: 2rem;">
+  <h3 style="font-family: var(--serif-display); font-style: italic; color: var(--ox); border-bottom: var(--hairline) solid var(--cream-edge); padding-bottom: 0.25rem;">
+    Recent attacks
+  </h3>
+  {{ if .Detail.Recent }}
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Run</th>
+          <th>Payload</th>
+          <th>Verdict</th>
+          <th class="num">Latency</th>
+          <th class="num">Tokens (in/out)</th>
+          <th>Judge</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .Detail.Recent }}
+          <tr>
+            <td>{{ isodate .TS }} {{ hms .TS }}</td>
+            <td><a href="/runs/{{ .RunID }}">{{ shortid .RunID }}</a></td>
+            <td><a href="/payloads/{{ .Payload }}">{{ .Payload }}</a></td>
+            <td>
+              <span class="pill {{ if eq .Verdict "refused" }}ok{{ else if eq .Verdict "complied" }}bad{{ else if eq .Verdict "partial" }}queued{{ else if .Error }}bad{{ else }}muted{{ end }}">
+                {{ if .Error }}error{{ else }}{{ .Verdict }}{{ end }}
+              </span>
+            </td>
+            <td class="num">{{ if .Error }}—{{ else }}{{ .LatencyMs }}{{ end }}</td>
+            <td class="num">{{ .InTokens }} / {{ .OutTokens }}</td>
+            <td class="muted">{{ .JudgeName }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ else }}
+    <div class="cold">No attacks recorded against this target.</div>
+  {{ end }}
+</section>
+
+{{/* ── fingerprints seen ───────────────────────────────────────── */}}
+{{ if .Detail.Fingerprints }}
+<section style="margin-top: 2rem;">
+  <h3 style="font-family: var(--serif-display); font-style: italic; color: var(--ox); border-bottom: var(--hairline) solid var(--cream-edge); padding-bottom: 0.25rem;">
+    Fingerprints observed
+  </h3>
+  <p class="muted" style="font-style: italic; font-size: 0.9rem;">
+    Distinct provider-side model ids seen for <code>{{ .Detail.Meta.Name }}</code>. More than one row here usually means a silent model rotation behind a stable name.
+  </p>
+  <ul style="font-family: var(--mono); font-size: 0.86rem;">
+    {{ range .Detail.Fingerprints }}
+      <li>{{ . }}</li>
+    {{ end }}
+  </ul>
+</section>
+{{ end }}
+
+{{ end }}
 {{ end }}
