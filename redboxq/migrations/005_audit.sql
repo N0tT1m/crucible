@@ -1,5 +1,5 @@
 -- mart.audit — one row per redboxq HTTP request, written by chi
--- middleware. Powers the /spank-… er, audit page (TODO: name).
+-- middleware. Powers the audit page.
 
 CREATE TABLE IF NOT EXISTS mart.audit (
     ts          DateTime64(3, 'UTC'),
@@ -16,4 +16,4 @@ CREATE TABLE IF NOT EXISTS mart.audit (
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
 ORDER BY (ts, route)
-TTL ts + INTERVAL 90 DAY;
+TTL toDateTime(ts) + INTERVAL 90 DAY;

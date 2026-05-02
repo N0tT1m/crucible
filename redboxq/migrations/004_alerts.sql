@@ -16,4 +16,4 @@ CREATE TABLE IF NOT EXISTS mart.alerts (
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
 ORDER BY (ts, rule_name)
-TTL ts + INTERVAL 365 DAY;
+TTL toDateTime(ts) + INTERVAL 365 DAY;

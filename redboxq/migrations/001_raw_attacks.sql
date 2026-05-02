@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS raw.attacks (
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
 ORDER BY (ts, run_id, target_name, payload_id)
-TTL ts + INTERVAL 365 DAY;
+TTL toDateTime(ts) + INTERVAL 365 DAY;
 
 -- Idempotent ALTERs: applied if the table already existed without these columns.
 ALTER TABLE raw.attacks ADD COLUMN IF NOT EXISTS rendered_prompt   String           CODEC(ZSTD(3));

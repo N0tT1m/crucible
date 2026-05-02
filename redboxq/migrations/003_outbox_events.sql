@@ -15,4 +15,4 @@ CREATE TABLE IF NOT EXISTS raw.outbox_events (
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
 ORDER BY (ts, session_id)
-TTL ts + INTERVAL 365 DAY;
+TTL toDateTime(ts) + INTERVAL 365 DAY;
