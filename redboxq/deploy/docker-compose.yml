@@ -1,0 +1,80 @@
+# redboxq stack. Run from redboxq/ via `make up`.
+#
+# Profiles:
+#   default — clickhouse + otel-collector + redboxq
+#   --profile dbt — adds a one-shot dbt runner (use `docker compose run dbt`)
+
+services:
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: redboxq-clickhouse
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8123:8123"   # HTTP
+      - "127.0.0.1:9000:9000"   # native
+    volumes:
+      - ch-data:/var/lib/clickhouse
+      - ../migrations:/docker-entrypoint-initdb.d:ro
+    environment:
+      - CLICKHOUSE_DB=mart
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    container_name: redboxq-otel
+    restart: unless-stopped
+    depends_on: [clickhouse]
+    ports:
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
+      - "127.0.0.1:4318:4318"   # OTLP HTTP
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+
+  redboxq:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: redboxq
+    restart: unless-stopped
+    depends_on: [clickhouse, otel-collector]
+    ports:
+      - "127.0.0.1:7000:7000"
+    environment:
+      - REDBOXQ_LISTEN_ADDR=:7000
+      - REDBOXQ_CH_ADDR=clickhouse:9000
+      - REDBOXQ_CH_DATABASE=mart
+      - REDBOXQ_CH_USERNAME=default
+      - REDBOXQ_CH_PASSWORD=
+      - REDBOXQ_OTLP_ENDPOINT=otel-collector:4317
+      - OTEL_SERVICE_NAME=redboxq
+      - REDBOXQ_DISCORD_WEBHOOK_URL=${REDBOXQ_DISCORD_WEBHOOK_URL:-}
+      - REDBOXQ_TELEGRAM_BOT_TOKEN=${REDBOXQ_TELEGRAM_BOT_TOKEN:-}
+      - REDBOXQ_TELEGRAM_CHAT_ID=${REDBOXQ_TELEGRAM_CHAT_ID:-}
+
+  # one-shot dbt runner. invoke via:  docker compose run --rm dbt build
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-clickhouse:1.8.latest
+    container_name: redboxq-dbt
+    profiles: [dbt]
+    depends_on: [clickhouse]
+    working_dir: /usr/app/dbt
+    volumes:
+      - ../dbt:/usr/app/dbt
+    environment:
+      - DBT_PROFILES_DIR=/usr/app/dbt
+      - CH_HOST=clickhouse
+      - CH_PORT=9000
+      - CH_USER=default
+      - CH_PASSWORD=
+      - CH_DATABASE=mart
+
+volumes:
+  ch-data:

@@ -1,0 +1,42 @@
+{{ define "title" }}Runs — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Runs</h2>
+  <p class="blurb">Every <code>redbox bench</code>. Newest first.</p>
+</div>
+
+{{ if .Rows }}
+<table class="ledger">
+  <thead>
+    <tr>
+      <th>Run</th>
+      <th>Started</th>
+      <th>Finished</th>
+      <th>Models</th>
+      <th class="num">Attacks</th>
+      <th class="num">Errors</th>
+      <th class="num">Refusal</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .Rows }}
+    <tr>
+      <td><a href="/runs/{{ .RunID }}">{{ shortid .RunID }}</a></td>
+      <td>{{ isodate .Started }} {{ hms .Started }}</td>
+      <td>{{ isodate .Finished }} {{ hms .Finished }}</td>
+      <td class="muted">{{ truncate 40 .Models }}</td>
+      <td class="num">{{ .Attacks }}</td>
+      <td class="num">{{ .Errors }}</td>
+      <td class="num">{{ pct .RefusalRate }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ else }}
+  <div class="cold">
+    No runs recorded yet.
+    <div class="note">Run <code>redbox bench</code> with <code>REDBOXQ_CH_URL</code> set.</div>
+  </div>
+{{ end }}
+{{ end }}

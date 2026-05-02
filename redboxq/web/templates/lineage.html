@@ -1,0 +1,23 @@
+{{ define "title" }}Lineage — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Lineage</h2>
+  <p class="blurb">Tables in ClickHouse, grouped by database. Source: <code>system.tables</code>.</p>
+</div>
+
+<div class="lineage-grid">
+  {{ range $db, $tables := .Tables }}
+    <div class="lineage-col">
+      <h3>{{ $db }}</h3>
+      {{ range $tables }}
+        <div class="node-card">
+          <div class="nm">{{ $db }}.{{ . }}</div>
+          <a href="/workbench?seed=SELECT%20*%20FROM%20{{ $db }}.{{ . }}%20LIMIT%20100"
+             class="meta">→ open in workbench</a>
+        </div>
+      {{ end }}
+    </div>
+  {{ end }}
+</div>
+{{ end }}

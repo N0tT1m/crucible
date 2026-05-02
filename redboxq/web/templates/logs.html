@@ -1,0 +1,26 @@
+{{ define "title" }}Logs — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Logs</h2>
+  <p class="blurb">Tail of <code>raw.otel_logs</code>. SSE-streamed; new lines arrive at top.</p>
+</div>
+
+<div class="log-slab"
+     hx-ext="sse"
+     sse-connect="/logs/stream"
+     sse-swap="message"
+     hx-swap="afterbegin">
+  {{ if .Rows }}
+    {{ range .Rows }}
+      <div class="row">
+        <span class="ts">{{ isodate .TS }} {{ .TS.Format "15:04:05.000" }}</span>
+        <span class="sev {{ .Severity }}">{{ .Severity }}</span>
+        <span class="body">{{ .Service }} {{ truncate 800 .Body }}</span>
+      </div>
+    {{ end }}
+  {{ else }}
+    <div class="row"><span class="ts">—</span><span class="sev INFO">INFO</span><span class="body">No logs in raw.otel_logs yet. Configure OTel and run a bench.</span></div>
+  {{ end }}
+</div>
+{{ end }}

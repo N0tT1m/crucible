@@ -1,0 +1,29 @@
+{{ define "title" }}Targets — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Targets</h2>
+  <p class="blurb">One card per model in the dim. 7-day refusal rate, attempts, errors.</p>
+</div>
+
+{{ if .Targets }}
+<div class="target-grid">
+  {{ range .Targets }}
+    <a href="/models/{{ .Name }}" class="target-card{{ if eq .Freshness "cold" }} dry{{ end }}" style="text-decoration:none;">
+      <div class="name">{{ .Name }}</div>
+      <div class="end">"{{ if eq .Freshness "fresh" }}fresh{{ else if eq .Freshness "warm" }}warming{{ else if eq .Freshness "stale" }}stale{{ else }}sleeping{{ end }}"</div>
+      <div class="stats">
+        <div><span class="k">refusal</span><span class="v">{{ pct .RefusalP }}</span></div>
+        <div><span class="k">attacks</span><span class="v">{{ .Attempts }}</span></div>
+        <div><span class="k">errors</span><span class="v">{{ .Errors }}</span></div>
+      </div>
+    </a>
+  {{ end }}
+</div>
+{{ else }}
+  <div class="cold">
+    No targets in <code>dim_model</code>.
+    <div class="note">Load <code>seeds/dim_model_seed.csv</code> via <code>dbt seed</code>.</div>
+  </div>
+{{ end }}
+{{ end }}

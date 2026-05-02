@@ -1,0 +1,27 @@
+{{/* reference.html — index of every page and what it does. SCAFFOLD ONLY. */}}
+
+{{ define "title" }}Reference — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Reference</h2>
+  <p class="blurb">What every page in the Dispatch shows you, and which marts it reads.</p>
+</div>
+
+<table class="ledger">
+  <thead>
+    <tr><th>Page</th><th>Question it answers</th><th>Reads from</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><a href="/">Front</a></td><td>Is the bench healthy this morning?</td><td>mart_refusal_rate, fact_attack, fact_canary_hit</td></tr>
+    <tr><td><a href="/runs">Runs</a></td><td>What did each bench produce?</td><td>fact_attack, mart_cost_per_run</td></tr>
+    <tr><td><a href="/attacks">Attacks</a></td><td>What did the model say to this prompt?</td><td>fact_attack</td></tr>
+    <tr><td><a href="/payloads">Payloads</a></td><td>Which attacks land, and have any rotted?</td><td>dim_payload, mart_payload_efficacy</td></tr>
+    <tr><td><a href="/models">Targets</a></td><td>Which models hold up best?</td><td>dim_model, mart_refusal_rate</td></tr>
+    <tr><td><a href="/judges">Judges</a></td><td>How often do regex and LLM disagree?</td><td>mart_judge_agreement</td></tr>
+    <tr><td><a href="/lineage">Lineage</a></td><td>What's in the warehouse, and what depends on what?</td><td>dbt manifest</td></tr>
+    <tr><td><a href="/workbench">Workbench</a></td><td>(arbitrary)</td><td>raw, stg, mart</td></tr>
+    <tr><td><a href="/logs">Logs</a></td><td>What happened in the last hour?</td><td>raw.otel_logs</td></tr>
+  </tbody>
+</table>
+{{ end }}

@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: dim_payload
+    description: Vault provenance + first_seen.
+    columns:
+      - name: payload_id
+        tests: [unique, not_null]
+
+  - name: dim_model
+    description: Every target known to redbox.
+    columns:
+      - name: model_name
+        tests: [unique, not_null]
+      - name: provider
+        tests:
+          - accepted_values:
+              values: [anthropic, openai, ollama, vllm]
+
+  - name: dim_judge
+    description: Every judge implementation.
+    columns:
+      - name: judge_name
+        tests: [unique, not_null]
+      - name: kind
+        tests:
+          - accepted_values:
+              values: [regex, llm]
+
+  - name: fact_attack
+    description: One row per attack with FKs into all dims.
+    columns:
+      - name: run_id
+        tests: [not_null]
+      - name: verdict
+        tests:
+          - accepted_values:
+              values: [refused, complied, partial, unknown]
+
+  - name: mart_refusal_rate
+    description: Daily refusal/comply/partial percentages.
+    columns:
+      - name: refusal_rate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1

@@ -1,0 +1,48 @@
+{{ define "title" }}Attacks — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Recent <em>attacks</em></h2>
+  <p class="blurb">Last {{ .Limit }} rows from <code>mart.fact_attack</code>.</p>
+</div>
+
+{{ if .Rows }}
+<table class="ledger">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>Run</th>
+      <th>Target</th>
+      <th>Payload</th>
+      <th>Verdict</th>
+      <th class="num">Latency</th>
+      <th class="num">Tokens (in/out)</th>
+      <th>Judge</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .Rows }}
+      <tr>
+        <td>{{ hms .TS }}</td>
+        <td><a href="/runs/{{ .RunID }}">{{ shortid .RunID }}</a></td>
+        <td>{{ .Target }}</td>
+        <td><a href="/payloads/{{ .Payload }}">{{ .Payload }}</a></td>
+        <td>
+          <span class="pill {{ if eq .Verdict "refused" }}ok{{ else if eq .Verdict "complied" }}bad{{ else if eq .Verdict "partial" }}queued{{ else if .Error }}bad{{ else }}muted{{ end }}">
+            {{ if .Error }}error{{ else }}{{ .Verdict }}{{ end }}
+          </span>
+        </td>
+        <td class="num">{{ if .Error }}—{{ else }}{{ .LatencyMs }}{{ end }}</td>
+        <td class="num">{{ .InTokens }} / {{ .OutTokens }}</td>
+        <td class="muted">{{ .JudgeName }}{{ if .Conf }} ({{ fnum (deref .Conf) 2 }}){{ end }}</td>
+      </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ else }}
+  <div class="cold">
+    No attacks for this filter window.
+    <div class="note">Run a bench, then come back.</div>
+  </div>
+{{ end }}
+{{ end }}

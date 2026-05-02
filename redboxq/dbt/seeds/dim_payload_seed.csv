@@ -1,0 +1,6 @@
+payload_id,name,category,references,tags,first_seen
+jailbreak_ignore_prior,Ignore Prior Instructions,jailbreak,"Perez & Ribeiro, Ignore Previous Prompt: Attack Techniques For Language Models, 2022",jailbreak;instruction-override;surface,2026-05-02
+jailbreak_dev_mode,Developer Mode Roleplay,jailbreak,,jailbreak;roleplay;surface,2026-05-02
+role_flip,Role Flip Pre-Compliance,jailbreak,,jailbreak;role-confusion;surface,2026-05-02
+authority_appeal_redteam,Red-Team Authority Appeal,jailbreak,,jailbreak;social;authority,2026-05-02
+sysprompt_repeat,System Prompt Verbatim Repeat,extraction,"Perez et al., Red Teaming Language Models with Language Models, 2022",extraction;sysprompt;surface,2026-05-02

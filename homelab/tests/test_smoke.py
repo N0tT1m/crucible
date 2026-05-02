@@ -5,6 +5,7 @@ import pytest
 
 from redbox.core.results import ResultsStore
 from redbox.core.runner import BenchRunner
+from redbox.core.sinks import SqliteSink
 from redbox.core.types import Payload, Response, Verdict
 from redbox.judges.regex_refusal import RegexRefusalJudge
 from redbox.payloads.loader import PayloadLoader
@@ -105,7 +106,7 @@ class FakeComplyTarget:
 @pytest.mark.asyncio
 async def test_runner_end_to_end(tmp_path):
     store = ResultsStore(tmp_path / "t.sqlite")
-    runner = BenchRunner(store=store, concurrency=2)
+    runner = BenchRunner(sinks=[SqliteSink(store)], concurrency=2)
     judge = RegexRefusalJudge()
 
     payloads = [
@@ -134,7 +135,7 @@ async def test_runner_end_to_end(tmp_path):
 @pytest.mark.asyncio
 async def test_runner_handles_target_exception(tmp_path):
     store = ResultsStore(tmp_path / "t.sqlite")
-    runner = BenchRunner(store=store, concurrency=2)
+    runner = BenchRunner(sinks=[SqliteSink(store)], concurrency=2)
 
     class BrokenTarget:
         name = "broken"

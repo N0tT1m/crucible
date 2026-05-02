@@ -1,0 +1,11 @@
+model_name,provider,family,parameter_class,local,added_on
+claude-sonnet,anthropic,claude-sonnet,xl,false,2025-01-01
+claude-opus,anthropic,claude-opus,xl,false,2025-01-01
+claude-haiku,anthropic,claude-haiku,m,false,2025-01-01
+gpt-4o,openai,gpt-4o,xl,false,2025-01-01
+qwen-14b,ollama,qwen,m,true,2025-01-01
+qwen3-32b,vllm,qwen,l,true,2025-01-01
+phi4,ollama,phi4,m,true,2025-01-01
+llama3-8b,ollama,llama,s,true,2025-01-01
+gemma3-27b,ollama,gemma,l,true,2025-01-01
+deepseek-r1,ollama,deepseek-r1,l,true,2025-01-01

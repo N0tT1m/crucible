@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
-from core.types import Result
+from redbox.core.types import Result
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -30,14 +30,29 @@ CREATE TABLE IF NOT EXISTS results (
     payload_id TEXT NOT NULL,
     target_name TEXT NOT NULL,
     model TEXT NOT NULL,
+    rendered_prompt TEXT,
+    system_prompt TEXT,
+    template_hash TEXT,
+    parent_payload_id TEXT,
     response TEXT NOT NULL,
     latency_ms INTEGER NOT NULL,
     input_tokens INTEGER NOT NULL,
     output_tokens INTEGER NOT NULL,
+    finish_reason TEXT,
+    model_fingerprint TEXT,
+    temperature REAL,
+    top_p REAL,
+    top_k INTEGER,
+    seed INTEGER,
     verdict TEXT,
     confidence REAL,
+    judge_name TEXT,
     judge_reasoning TEXT,
     error TEXT,
+    error_kind TEXT,
+    base_url TEXT,
+    caller_user TEXT,
+    usd_at_attack REAL,
     ts TEXT NOT NULL,
     FOREIGN KEY(run_id) REFERENCES runs(run_id)
 );
@@ -47,6 +62,26 @@ CREATE INDEX IF NOT EXISTS idx_results_payload ON results(payload_id);
 CREATE INDEX IF NOT EXISTS idx_results_target ON results(target_name);
 CREATE INDEX IF NOT EXISTS idx_results_verdict ON results(verdict);
 """
+
+# Best-effort ALTER TABLE for any preexisting DB. SQLite raises if the
+# column already exists; we swallow that case.
+ALTERS = [
+    "ALTER TABLE results ADD COLUMN rendered_prompt TEXT",
+    "ALTER TABLE results ADD COLUMN system_prompt TEXT",
+    "ALTER TABLE results ADD COLUMN template_hash TEXT",
+    "ALTER TABLE results ADD COLUMN parent_payload_id TEXT",
+    "ALTER TABLE results ADD COLUMN finish_reason TEXT",
+    "ALTER TABLE results ADD COLUMN model_fingerprint TEXT",
+    "ALTER TABLE results ADD COLUMN temperature REAL",
+    "ALTER TABLE results ADD COLUMN top_p REAL",
+    "ALTER TABLE results ADD COLUMN top_k INTEGER",
+    "ALTER TABLE results ADD COLUMN seed INTEGER",
+    "ALTER TABLE results ADD COLUMN judge_name TEXT",
+    "ALTER TABLE results ADD COLUMN error_kind TEXT",
+    "ALTER TABLE results ADD COLUMN base_url TEXT",
+    "ALTER TABLE results ADD COLUMN caller_user TEXT",
+    "ALTER TABLE results ADD COLUMN usd_at_attack REAL",
+]
 
 DEFAULT_DB = Path(os.environ.get("REDBOX_DB", "redbox.sqlite"))
 
@@ -59,6 +94,11 @@ class ResultsStore:
     def _init(self) -> None:
         with self._conn() as c:
             c.executescript(SCHEMA)
+            for stmt in ALTERS:
+                try:
+                    c.execute(stmt)
+                except sqlite3.OperationalError:
+                    pass  # column already exists
 
     @contextmanager
     def _conn(self) -> Iterator[sqlite3.Connection]:
@@ -90,17 +130,26 @@ class ResultsStore:
         with self._conn() as c:
             c.execute(
                 """INSERT INTO results
-                   (run_id, payload_id, target_name, model, response,
-                    latency_ms, input_tokens, output_tokens, verdict,
-                    confidence, judge_reasoning, error, ts)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   (run_id, payload_id, target_name, model,
+                    rendered_prompt, system_prompt, template_hash, parent_payload_id,
+                    response, latency_ms, input_tokens, output_tokens,
+                    finish_reason, model_fingerprint,
+                    temperature, top_p, top_k, seed,
+                    verdict, confidence, judge_name, judge_reasoning,
+                    error, error_kind, base_url, caller_user, usd_at_attack, ts)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    result.run_id, result.payload_id, result.target_name,
-                    result.model, result.response, result.latency_ms,
+                    result.run_id, result.payload_id, result.target_name, result.model,
+                    result.rendered_prompt, result.system_prompt,
+                    result.template_hash, result.parent_payload_id,
+                    result.response, result.latency_ms,
                     result.input_tokens, result.output_tokens,
+                    result.finish_reason, result.model_fingerprint,
+                    result.temperature, result.top_p, result.top_k, result.seed,
                     result.verdict.value if result.verdict else None,
-                    result.confidence, result.judge_reasoning,
-                    result.error, result.ts.isoformat(),
+                    result.confidence, result.judge_name, result.judge_reasoning,
+                    result.error, result.error_kind, result.base_url,
+                    result.caller_user, result.usd_at_attack, result.ts.isoformat(),
                 ),
             )
 

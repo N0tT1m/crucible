@@ -1,0 +1,12 @@
+{{ define "title" }}Not found — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Not <em>found</em></h2>
+  <p class="blurb">The page you asked for isn't in this edition.</p>
+</div>
+<div class="cold">
+  <em>{{ .Path }}</em> doesn't match any route in this issue.
+  <div class="note">Check the masthead links, or head <a href="/">back to the front</a>.</div>
+</div>
+{{ end }}

@@ -9,7 +9,8 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")"
+# up.sh lives at the project root; the compose file lives in homelab/.
+cd "$(dirname "$0")/homelab"
 
 # -------- args --------
 PROFILES=()
@@ -38,9 +39,9 @@ if ! docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi >
 fi
 
 if [[ ! -f .env ]]; then
-  echo "==> creating .env from .env.example"
-  cp .env.example .env
-  echo "    (edit .env to add API keys before using frontier providers)"
+  echo "==> creating homelab/.env from project root .env.example"
+  cp ../.env.example .env
+  echo "    (edit homelab/.env to add API keys before using frontier providers)"
 fi
 
 mkdir -p agent/outbox

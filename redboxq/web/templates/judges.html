@@ -1,0 +1,36 @@
+{{ define "title" }}Judges — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Judges</h2>
+  <p class="blurb">Regex vs LLM verdict per attack. Disagreements surface false-positive patterns.</p>
+</div>
+
+{{ if .Rows }}
+<table class="ledger">
+  <thead>
+    <tr><th>Regex</th><th>LLM</th><th class="num">Count</th><th>Agreed</th></tr>
+  </thead>
+  <tbody>
+    {{ range .Rows }}
+    <tr {{ if not .Agreed }}class="dry"{{ end }}>
+      <td><span class="pill {{ if eq .RegexVerdict "refused" }}ok{{ else if eq .RegexVerdict "complied" }}bad{{ else }}muted{{ end }}">{{ .RegexVerdict }}</span></td>
+      <td><span class="pill {{ if eq .LLMVerdict "refused" }}ok{{ else if eq .LLMVerdict "complied" }}bad{{ else }}muted{{ end }}">{{ .LLMVerdict }}</span></td>
+      <td class="num">{{ .Count }}</td>
+      <td>{{ if .Agreed }}<span class="pill ok">yes</span>{{ else }}<span class="pill bad">no</span>{{ end }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+<p class="muted" style="margin-top:1rem;">
+  Disagreement rows in italic. Common pattern: regex flags "As an AI assistant" as
+  refusal but the LLM judge sees actual compliance — tighten the pattern in
+  <code>redbox/judges/regex_refusal.py</code>.
+</p>
+{{ else }}
+  <div class="cold">
+    Run a bench with <code>--judge llm</code> at least once to populate this.
+    <div class="note">Currently we have only single-judge data; agreement needs both judges on the same attacks.</div>
+  </div>
+{{ end }}
+{{ end }}

@@ -49,20 +49,48 @@ class Response(BaseModel):
     latency_ms: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
+    finish_reason: str = ""           # end_turn|max_tokens|stop_sequence|content_filter|error|''
+    model_fingerprint: str = ""       # e.g. claude-haiku-4-5-20251001 (provider's exact model id)
 
 
 class Result(BaseModel):
-    """One row in the results store (A5)."""
+    """One row in the results store (A5) and raw.attacks (CH)."""
     run_id: str
     payload_id: str
     target_name: str
     model: str
+
+    # prompt provenance
+    rendered_prompt: str = ""
+    system_prompt: str = ""
+    template_hash: str = ""           # 16-hex xxhash of rendered_prompt
+    parent_payload_id: str = ""       # set by mutators; '' for vault originals
+
+    # response
     response: str
     latency_ms: int
     input_tokens: int
     output_tokens: int
+    finish_reason: str = ""
+    model_fingerprint: str = ""
+
+    # sampling params (frozen)
+    temperature: float | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    seed: int | None = None
+
+    # judge
     verdict: Verdict | None = None
     confidence: float | None = None
+    judge_name: str = ""
     judge_reasoning: str = ""
+
+    # ops
     error: str | None = None
+    error_kind: str = ""              # timeout|rate_limit|auth|bad_request|server|other|''
+    base_url: str = ""
+    caller_user: str = ""
+    usd_at_attack: float | None = None
+
     ts: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

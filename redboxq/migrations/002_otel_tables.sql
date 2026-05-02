@@ -1,0 +1,17 @@
+-- raw.otel_* — created automatically by the OTel ClickHouse exporter
+-- when `create_schema: true` is set in otel-collector.yaml.
+--
+-- This file is a stub for documentation only; do not run it. The
+-- exporter manages schema migrations across collector versions.
+--
+-- Reference shape (subject to change):
+--
+--   raw.otel_traces  (Timestamp, TraceId, SpanId, ParentSpanId,
+--                     ServiceName, SpanName, SpanKind, Duration,
+--                     StatusCode, ResourceAttributes, SpanAttributes, …)
+--
+--   raw.otel_logs    (Timestamp, TraceId, SpanId, SeverityText,
+--                     SeverityNumber, ServiceName, Body,
+--                     LogAttributes, ResourceAttributes, …)
+--
+--   raw.otel_metrics_<kind>  (gauge / sum / histogram / summary / exponentialhistogram)

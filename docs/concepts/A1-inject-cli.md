@@ -181,6 +181,33 @@ You should be able to answer:
 
 When those answers feel obvious, you've finished A1 and can move to A2.
 
+## Planned enhancements
+
+A1 stays a primitive — one prompt, one transport — but two small additions are worth doing without breaking that identity. Both preserve "single send, no judging, no persistence" and unlock real workflows.
+
+### `--json` output
+
+Default rich-formatted output is fine for humans and useless for piping. A `--json` flag emits one JSON object per invocation with `text`, `latency_ms`, `input_tokens`, `output_tokens`, and (when a judge is wired) `verdict / confidence / reasoning`.
+
+```bash
+redbox inject -m phi4 -u "..." --json | jq -r '.text'
+redbox inject -m phi4 -p authority_appeal_redteam -q "..." --json | tee out.json
+```
+
+The point isn't formatting — it's that A1 becomes composable with shell pipelines, watch loops, and any tool that consumes JSON on stdin. ~5 lines in `cli.py`.
+
+### `-n N` repeated sampling
+
+A single shot tells you what happened *once*. It doesn't tell you whether the refusal is stable or whether you got lucky. `-n N` runs the same `(system, user, model, temp)` tuple N times and prints each response (or aggregates them under `--json`).
+
+```bash
+redbox inject -m phi4 -p authority_appeal_redteam -q "..." -n 20 --temp 1.0
+```
+
+Why this matters: at `--temp 1.0`, the same payload may refuse 18/20 times and comply 2/20. That ratio is the *probability* the attack succeeds — which is what you actually want to measure. Without `-n`, you confuse "this attack works" with "this attack worked once."
+
+This is the cheapest jailbreak-research primitive that exists. No judge required — eyeballing 20 outputs is fine for variance estimation, and once A4 is wired, the verdict distribution falls out for free.
+
 ## Reference implementation
 
 Already in this repo:

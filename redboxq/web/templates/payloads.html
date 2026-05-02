@@ -1,0 +1,40 @@
+{{ define "title" }}Payloads — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Payloads</h2>
+  <p class="blurb">Every YAML in <code>redbox/payloads/vault</code>, joined with 7-day efficacy.</p>
+</div>
+
+{{ if .Rows }}
+<table class="ledger">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Category</th>
+      <th>Tags</th>
+      <th class="num">Attempts (7d)</th>
+      <th class="num">Compliance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .Rows }}
+    <tr>
+      <td><a href="/payloads/{{ .ID }}">{{ .ID }}</a></td>
+      <td>{{ .Name }}</td>
+      <td>{{ .Category }}</td>
+      <td class="muted">{{ .Tags }}</td>
+      <td class="num">{{ .Attempts7d }}</td>
+      <td class="num">{{ pct .ComplianceRate }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ else }}
+  <div class="cold">
+    No payloads in <code>dim_payload</code>.
+    <div class="note">Run <code>scripts/seed_dim_payload.py</code>, then <code>dbt seed</code>.</div>
+  </div>
+{{ end }}
+{{ end }}

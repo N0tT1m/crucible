@@ -1,0 +1,60 @@
+name: redboxq
+version: '0.1.0'
+config-version: 2
+
+profile: redboxq
+
+model-paths:    ["models"]
+seed-paths:     ["seeds"]
+macro-paths:    ["macros"]
+test-paths:     ["tests"]
+analysis-paths: ["analyses"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  redboxq:
+    +materialized: view
+    staging:
+      +materialized: view
+      +schema: stg
+    marts:
+      +materialized: table
+      +schema: mart
+
+seeds:
+  redboxq:
+    +schema: mart
+    dim_payload_seed:
+      +column_types:
+        payload_id: String
+        name: String
+        category: "LowCardinality(String)"
+        references: String
+        tags: String
+        first_seen: String
+    dim_model_seed:
+      +column_types:
+        model_name: String
+        provider: "LowCardinality(String)"
+        family: "LowCardinality(String)"
+        parameter_class: "LowCardinality(String)"
+        local: Boolean
+        added_on: String
+    dim_judge_seed:
+      +column_types:
+        judge_name: String
+        kind: "LowCardinality(String)"
+        base_model: String
+        description: String
+    dim_model_pricing:
+      +column_types:
+        model_name: String
+        usd_per_input_token: Float64
+        usd_per_output_token: Float64
+        effective_from: String
+
+vars:
+  attack_retention_days: 365

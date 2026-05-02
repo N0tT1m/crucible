@@ -1,0 +1,21 @@
+{{/* attack_detail.html — single-attack drill-down. SCAFFOLD ONLY. */}}
+
+{{ define "title" }}Attack {{ .ID }} — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>Attack <em>{{ .ID }}</em></h2>
+  <p class="blurb">{{ .Target }} ↔ {{ .PayloadID }} · {{ .Verdict }}</p>
+</div>
+
+{{/* TODO sections:
+       1. metadata box (run_id, ts, target, payload, verdict, latency, tokens)
+       2. prompt + rendered template (collapsed by default)
+       3. response (full text)
+       4. judge reasoning (regex hits + LLM JSON)
+       5. linked OTel trace (waterfall via stg_agent_tool_calls if applicable)
+       6. neighboring attacks in same run                                     */}}
+<div class="cold">
+  <em>Detail render is not implemented yet.</em>
+</div>
+{{ end }}

@@ -1,0 +1,51 @@
+{{/* base.html — outer shell. Every page extends this via:
+       {{ define "title" }} … {{ end }}
+       {{ define "content" }} … {{ end }}                                    */}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ block "title" . }}The Crucible Dispatch{{ end }}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='25' font-size='26' font-family='serif'%3E&#x269A;%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/static/forge.css?v={{ .StaticV }}" />
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+  <script src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js" defer></script>
+  <script src="/static/forge.js?v={{ .StaticV }}" defer></script>
+  {{ block "head_extra" . }}{{ end }}
+</head>
+<body>
+
+<header class="masthead">
+  <div class="topline">
+    <span class="vol">Vol. {{ .Vol }} &nbsp;·&nbsp; No. {{ .Issue }}</span>
+    <span>Filed {{ .Today }} &nbsp;·&nbsp; {{ .FiledTime }}, the bench</span>
+    <span>Pub. by Crucible Press</span>
+  </div>
+  <h1 class="title">The Crucible <em>Dispatch</em></h1>
+  <div class="dateline">
+    <span>{{ .Tagline }}</span>
+    <span class="caption">redboxq · :{{ .Port }} · service = {{ .Service }}</span>
+  </div>
+</header>
+
+<nav class="sections" aria-label="Sections">
+  {{ range .Sections }}
+    <a href="{{ .Slug }}"
+       title="{{ .Blurb }}"
+       class="{{ if eq $.Current .Slug }}current{{ end }}">{{ .Name }}</a>
+  {{ end }}
+</nav>
+
+<main class="shell">
+  {{ block "content" . }}{{ end }}
+
+  <footer class="colophon">
+    <span>Set in Fraunces &amp; Newsreader · printed in oxblood ink</span>
+    <span>redboxq · :{{ .Port }} · service = {{ .Service }}</span>
+    <span>One quiet lab is one good lab.</span>
+  </footer>
+</main>
+
+</body>
+</html>

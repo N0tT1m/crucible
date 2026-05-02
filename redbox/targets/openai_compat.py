@@ -1,4 +1,4 @@
-"""OpenAI-compatible target. A1's `inject-cli` is this + the CLI wrapper.
+"""OpenAI-compatible target.
 
 Works with anything OpenAI-compatible: LiteLLM proxy, OpenAI, Anthropic
 (via LiteLLM), vLLM, Ollama-as-OpenAI. Defaults point at the homelab's
@@ -11,7 +11,7 @@ import time
 
 import httpx
 
-from core.types import Response
+from redbox.core.types import Response
 
 
 class OpenAICompatTarget:
@@ -40,12 +40,18 @@ class OpenAICompatTarget:
         user: str,
         system: str | None = None,
         temperature: float = 0.7,
+        top_p: float | None = None,
+        seed: int | None = None,
     ) -> Response:
         messages: list[dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
-        body = {"model": self.model, "messages": messages, "temperature": temperature}
+        body: dict = {"model": self.model, "messages": messages, "temperature": temperature}
+        if top_p is not None:
+            body["top_p"] = top_p
+        if seed is not None:
+            body["seed"] = seed
         headers = {"Authorization": f"Bearer {self.api_key}"}
 
         t0 = time.perf_counter()
@@ -60,13 +66,38 @@ class OpenAICompatTarget:
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
         choices = data.get("choices") or [{}]
-        message = choices[0].get("message") or {}
+        choice0 = choices[0]
+        message = choice0.get("message") or {}
         text = message.get("content") or ""
         usage = data.get("usage") or {}
+
+        # finish_reason — OpenAI/Anthropic use slightly different vocab.
+        # Normalise to the canonical set we store in CH.
+        raw_finish = (choice0.get("finish_reason") or choice0.get("stop_reason") or "")
+        finish = {
+            "stop": "end_turn",
+            "length": "max_tokens",
+            "content_filter": "content_filter",
+            "tool_calls": "end_turn",
+            "function_call": "end_turn",
+            "end_turn": "end_turn",
+        }.get(raw_finish, raw_finish or "")
+
+        # model_fingerprint — providers return their dated model id in
+        # different fields.
+        fp = (
+            data.get("model")
+            or data.get("system_fingerprint")
+            or message.get("model")
+            or ""
+        )
+
         return Response(
             text=text,
             raw=data,
             latency_ms=latency_ms,
             input_tokens=usage.get("prompt_tokens", 0),
             output_tokens=usage.get("completion_tokens", 0),
+            finish_reason=finish,
+            model_fingerprint=str(fp),
         )

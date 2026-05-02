@@ -1,0 +1,133 @@
+{{ define "title" }}Front — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="frontpage">
+
+  <article class="lead">
+    <span class="kicker">{{ .Kicker }}</span>
+    <h2 class="headline">{{ .Headline | safeHTML }}</h2>
+    <p class="subhead">{{ .Subhead }}</p>
+
+    <div class="byline">
+      <span class="stamp">Editor</span>
+      Filed by the runner &nbsp;·&nbsp;
+      <span class="mono">runs = {{ .Stats.Runs }} · attacks = {{ thousands .Stats.Attacks }} · errors = {{ .Stats.Errors }} · refused = {{ thousands .Stats.Refused }}</span>
+    </div>
+
+    <div class="article">
+      {{ .ArticleHTML | safeHTML }}
+      <div class="signature">— The Editor, {{ .Today }}</div>
+    </div>
+  </article>
+
+  <aside class="rail">
+
+    <section class="boxout">
+      <h4>Today's bench, at a glance</h4>
+      <div class="row-flex">
+        <div>
+          <span class="label">Runs</span>
+          <div class="figure ox">{{ .Stats.Runs }}</div>
+        </div>
+        <div>
+          <span class="label">Attacks</span>
+          <div class="figure">{{ thousands .Stats.Attacks }}</div>
+        </div>
+      </div>
+      <div class="row-flex">
+        <div>
+          <span class="label">Refused</span>
+          <div class="figure lip tnum">{{ pct .Stats.PctRef }}</div>
+        </div>
+        <div>
+          <span class="label">Errors</span>
+          <div class="figure">{{ .Stats.Errors }}</div>
+        </div>
+      </div>
+      {{ if not .Stats.LastSeen.IsZero }}
+        <div class="muted mono" style="font-size:11px; letter-spacing:0.1em;">
+          last attack landed {{ isodate .Stats.LastSeen }} {{ hhmm .Stats.LastSeen }}
+        </div>
+      {{ end }}
+    </section>
+
+    <section class="boxout">
+      <h4>The weather</h4>
+      <div class="weather">
+        <div class="stripe">
+          {{ range .Targets }}
+            <span class="b {{ .Freshness }}" title="{{ .Name }} — {{ .Freshness }}"></span>
+          {{ end }}
+        </div>
+      </div>
+      <p style="margin: 0.6rem 0 0; font-style: italic; color: var(--ink-soft); font-size:0.92rem;">
+        {{ len .Targets }} target(s) tracked.
+      </p>
+      <a href="/models" class="mono" style="font-size:11px; letter-spacing:0.16em;">→ Targets</a>
+    </section>
+
+    <section class="boxout">
+      <h4>Recent canaries</h4>
+      {{ if .Canaries }}
+        <span class="pill bad">{{ len .Canaries }} hit(s)</span>
+        <ul style="list-style:none; padding:0; margin:0.5rem 0 0;
+                   font-family: var(--mono); font-size: 0.82rem;">
+          {{ range .Canaries }}
+            <li><span class="muted">{{ hms .TS }}</span>
+                <strong>{{ .Service }}</strong>
+                <span class="muted">{{ truncate 28 .Token }}</span></li>
+          {{ end }}
+        </ul>
+      {{ else }}
+        <p class="muted" style="font-style: italic;">
+          No canary tokens detected in the last 24 hours.
+        </p>
+        <p class="hand" style="margin: 0.4rem 0 0; font-size:1.1rem;">
+          A quiet lab is a healthy lab.
+        </p>
+      {{ end }}
+    </section>
+
+    <section class="boxout">
+      <h4>Recent attacks</h4>
+      {{ if .Recent }}
+        <table class="ledger" style="font-size: 0.78rem;">
+          <thead>
+            <tr><th>Time</th><th>Target</th><th>Verdict</th></tr>
+          </thead>
+          <tbody>
+            {{ range .Recent }}
+              <tr>
+                <td>{{ hms .TS }}</td>
+                <td>{{ truncate 14 .Target }}</td>
+                <td><span class="pill {{ if eq .Verdict "refused" }}ok{{ else if eq .Verdict "complied" }}bad{{ else if eq .Verdict "partial" }}queued{{ else if eq .Verdict "error" }}bad{{ else }}muted{{ end }}">{{ .Verdict }}</span></td>
+              </tr>
+            {{ end }}
+          </tbody>
+        </table>
+        <a href="/attacks" class="mono" style="font-size:11px; letter-spacing:0.16em;">→ All attacks</a>
+      {{ else }}
+        <p class="muted" style="font-style: italic;">
+          No attacks recorded yet. Run <code>redbox bench</code>.
+        </p>
+      {{ end }}
+    </section>
+
+    <section class="boxout">
+      <h4>Reading list</h4>
+      <ul style="list-style:none; padding:0; margin: 0; font-family: var(--mono); font-size: 0.85rem;">
+        <li><a href="/runs">▸ Runs — every bench</a></li>
+        <li><a href="/attacks">▸ Attacks ledger</a></li>
+        <li><a href="/payloads">▸ Payloads + efficacy</a></li>
+        <li><a href="/models">▸ Targets</a></li>
+        <li><a href="/judges">▸ Judges</a></li>
+        <li><a href="/workbench">▸ Workbench</a></li>
+        <li><a href="/logs">▸ Logs</a></li>
+        <li><a href="/lineage">▸ Lineage</a></li>
+        <li><a href="/reference"><strong>▸ Reference — page index</strong></a></li>
+      </ul>
+    </section>
+
+  </aside>
+</div>
+{{ end }}

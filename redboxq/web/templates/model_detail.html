@@ -1,0 +1,17 @@
+{{/* model_detail.html — per-target drill-down. SCAFFOLD ONLY. */}}
+
+{{ define "title" }}{{ .Name }} — Targets — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>{{ .Name }}</h2>
+  <p class="blurb">{{ .Provider }} · {{ .Family }}</p>
+</div>
+
+{{/* TODO sections:
+       1. headline figures (refusal rate today vs 14d, attacks today, cost today)
+       2. refusal-rate timeline (canvas sparkline, oxblood)
+       3. common-failure payloads (which attacks land most)
+       4. recent attacks ledger filtered to this target                       */}}
+<div class="cold"><em>Target detail not implemented yet.</em></div>
+{{ end }}

@@ -12,6 +12,7 @@ import os
 import time
 import uuid
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -20,13 +21,19 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 import tools
+from telemetry import init_otel, tracer
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 MODEL = os.environ.get("MODEL", "qwen2.5:32b")
 MAX_TOOL_ITERATIONS = int(os.environ.get("MAX_TOOL_ITERATIONS", "8"))
 SYSTEM_PROMPT = Path("system_prompt.txt").read_text()
 
+# Optional ClickHouse outbox sink — set REDBOXQ_CH_URL to enable.
+CH_URL = os.environ.get("REDBOXQ_CH_URL", "").rstrip("/")
+
 app = FastAPI(title="redlab-agent", description="Attackable agent target")
+init_otel(app)
+tr = tracer()
 
 # Session state lives in-memory. Restart wipes it.
 SESSIONS: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -67,10 +74,56 @@ def execute_tool(session_id: str, name: str, args: dict) -> str:
     fn = tools.REGISTRY.get(name)
     if fn is None:
         return f"ERROR: unknown tool '{name}'"
+    with tr.start_as_current_span(
+        f"tool.{name}",
+        attributes={
+            "session_id": session_id,
+            "args": json.dumps(args)[:1000],
+        },
+    ) as span:
+        try:
+            out = fn(session_id=session_id, memory=MEMORY[session_id], **args)
+            try:
+                if span is not None:
+                    span.set_attribute("output_preview", (out or "")[:1000])
+            except Exception:
+                pass
+            if name == "send_email":
+                _record_outbox(session_id, args, out)
+            return out
+        except Exception as e:
+            return f"ERROR: {type(e).__name__}: {e}"
+
+
+def _record_outbox(session_id: str, args: dict, _output: str) -> None:
+    """Insert a row into raw.outbox_events. Best-effort; never raises."""
+    if not CH_URL:
+        return
     try:
-        return fn(session_id=session_id, memory=MEMORY[session_id], **args)
-    except Exception as e:
-        return f"ERROR: {type(e).__name__}: {e}"
+        from opentelemetry import trace as _otel
+        ctx = _otel.get_current_span().get_span_context()
+        trace_id = format(ctx.trace_id, "032x") if ctx and ctx.is_valid else ""
+    except Exception:
+        trace_id = ""
+
+    row = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "session_id": session_id,
+        "model": MODEL,
+        "to_addr": str(args.get("to", ""))[:512],
+        "subject": str(args.get("subject", ""))[:512],
+        "body": str(args.get("body", ""))[:8000],
+        "trace_id": trace_id,
+    }
+    try:
+        with httpx.Client(timeout=5.0) as c:
+            c.post(
+                CH_URL,
+                params={"query": "INSERT INTO raw.outbox_events FORMAT JSONEachRow"},
+                content=json.dumps(row),
+            )
+    except Exception:
+        pass
 
 
 def run_agent_loop(session_id: str, user_message: str, model: str) -> ChatResponse:

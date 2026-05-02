@@ -11,3 +11,15 @@ dist/
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# redboxq build artifacts
+redboxq/bin/
+redboxq/dbt/target/
+redboxq/dbt/dbt_packages/
+redboxq/dbt/profiles.yml
+redboxq/deploy/.env

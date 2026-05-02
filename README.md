@@ -9,16 +9,20 @@ A learning lab for AI red-teaming. Three pieces:
 ## Quick start
 
 ```bash
-# 1. Bring up the target environment
-cd homelab && cp .env.example .env && ./up.sh
+# 1. Bring up the target environment (from the project root)
+./up.sh
 
 # 2. Install the toolkit and run the spine
-cd ../redbox && python3 -m venv .venv && source .venv/bin/activate
-pip install -e .[dev]
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e '.[dev]'
 redbox bench -m qwen-14b --judge regex
 ```
 
-See `redbox/README.md` and `homelab/README.md` for details.
+Add `pip install -e '.[otel]'` and set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317`
+to ship telemetry to redboxq. Add `REDBOXQ_CH_URL=http://localhost:8123` to
+dual-write attack rows into ClickHouse.
+
+See `homelab/README.md` and `redboxq/README.md` for details.
 
 ## Safety and authorized use
 

@@ -1,0 +1,56 @@
+version: 2
+
+sources:
+  - name: raw
+    database: raw
+    description: |
+      Producer-written tables. Anything in here is the source of truth;
+      staging and mart layers transform but never modify.
+    tables:
+      - name: attacks
+        description: One row per attack from redbox.runner.
+        columns:
+          - name: ts
+            tests: [not_null]
+          - name: run_id
+            tests: [not_null]
+          - name: payload_id
+            tests: [not_null]
+          - name: target_name
+            tests: [not_null]
+          - name: verdict
+            description: refused | complied | partial | unknown | ''(no judge)
+
+      - name: outbox_events
+        description: One row per redlab-agent send_email tool call (canary source).
+        columns:
+          - name: ts
+            tests: [not_null]
+          - name: session_id
+            tests: [not_null]
+
+      - name: otel_traces
+        description: |
+          Span tree from every producer (redbox CLI, redlab-agent,
+          redboxq). Schema managed by the OTel ClickHouse exporter.
+        loaded_at_field: Timestamp
+
+      - name: otel_logs
+        description: Log records from every producer.
+        loaded_at_field: Timestamp
+
+      - name: run_configs
+        description: Run lifecycle + config snapshot, written by redbox.cli.
+        columns:
+          - name: run_id
+            tests: [not_null]
+
+  - name: mart_src
+    database: mart
+    description: |
+      External tables in the mart database that dbt does not own.
+      `dim_label` is written by the redboxq UI's labeling form; we
+      read it here to compute judge accuracy.
+    tables:
+      - name: dim_label
+        description: Human ground-truth labels for attacks.

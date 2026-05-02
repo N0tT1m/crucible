@@ -1,0 +1,3 @@
+judge_name,kind,base_model,description
+regex-refusal,regex,,Pattern-based refusal detector. First-pass filter; cheap.
+llm-refusal,llm,claude-haiku,Strict JSON-rubric LLM judge. Run on regex misses or as ensemble.

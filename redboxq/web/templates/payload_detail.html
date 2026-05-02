@@ -1,0 +1,17 @@
+{{/* payload_detail.html — efficacy heatmap + provenance. SCAFFOLD ONLY. */}}
+
+{{ define "title" }}{{ .ID }} — Payloads — The Crucible Dispatch{{ end }}
+
+{{ define "content" }}
+<div class="section-head">
+  <h2>{{ .Name }} <em>({{ .ID }})</em></h2>
+  <p class="blurb">{{ .Category }}</p>
+</div>
+
+{{/* TODO sections:
+       1. provenance box (references, tags, first_seen, template_hash)
+       2. template (verbatim, syntax-highlighted)
+       3. efficacy heatmap: model × week, color = compliance rate
+       4. recent attacks ledger filtered to this payload                      */}}
+<div class="cold"><em>Payload detail not implemented yet.</em></div>
+{{ end }}
