@@ -35,6 +35,34 @@ services:
         soft: 262144
         hard: 262144
 
+  # Idempotent migration runner. Applies every /docker-entrypoint-initdb.d/*.sql
+  # against the running ClickHouse on every `docker compose up`. Migrations are
+  # all `IF NOT EXISTS`, so re-running is safe.
+  ch-migrate:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: redboxq-ch-migrate
+    depends_on: [clickhouse]
+    restart: "no"
+    volumes:
+      - ../migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        # wait for ClickHouse to be reachable
+        for i in $$(seq 1 30); do
+          if clickhouse-client --host clickhouse --query "SELECT 1" > /dev/null 2>&1; then
+            break
+          fi
+          echo "waiting for clickhouse..."
+          sleep 2
+        done
+        for f in /migrations/*.sql; do
+          echo "==> $$f"
+          clickhouse-client --host clickhouse --multiquery < "$$f"
+        done
+        echo "migrations applied"
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.103.0
     container_name: redboxq-otel
@@ -53,7 +81,11 @@ services:
       dockerfile: deploy/Dockerfile
     container_name: redboxq
     restart: unless-stopped
-    depends_on: [clickhouse, otel-collector]
+    depends_on:
+      ch-migrate:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
     ports:
       - "127.0.0.1:7000:7000"
     environment:
@@ -74,7 +106,9 @@ services:
     image: ghcr.io/dbt-labs/dbt-clickhouse:1.8.latest
     container_name: redboxq-dbt
     profiles: [dbt]
-    depends_on: [clickhouse]
+    depends_on:
+      ch-migrate:
+        condition: service_completed_successfully
     working_dir: /usr/app/dbt
     volumes:
       - ../dbt:/usr/app/dbt
