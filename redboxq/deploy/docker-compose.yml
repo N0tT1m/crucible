@@ -44,14 +44,16 @@ services:
   # chokes on \r at EOL. The script also strips \r from the migration
   # files before POSTing so SQL parsers don't see "\rCREATE\r".
   ch-migrate:
-    image: curlimages/curl:8.10.1
+    # Use the clickhouse-server image so we get clickhouse-client in PATH.
+    # `clickhouse-client --multiquery` natively supports multi-statement
+    # files; the HTTP `multistatements` URL param doesn't exist on 24.3.
+    image: clickhouse/clickhouse-server:24.3-alpine
     container_name: redboxq-ch-migrate
     depends_on: [clickhouse]
     restart: "no"
     volumes:
       - ../migrations:/migrations:ro
       - ./migrate.sh:/migrate.sh:ro
-    user: "0"
     entrypoint: ["/bin/sh", "/migrate.sh"]
 
   otel-collector:
