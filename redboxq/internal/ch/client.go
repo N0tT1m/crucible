@@ -38,6 +38,19 @@ func Open(addr, database, user, pass string) (*Client, error) {
 
 func (c *Client) Close() error { return c.conn.Close() }
 
+// hasLimit returns true if upper-cased SQL already has a top-level LIMIT.
+// Naive but works for our queries — we don't have subqueries with LIMIT
+// that would confuse it.
+func hasLimit(upperSQL string) bool {
+	// Strip a trailing semicolon if any.
+	s := strings.TrimRight(strings.TrimSpace(upperSQL), ";")
+	// Last 100 chars are enough to find a tail LIMIT clause.
+	if len(s) > 100 {
+		s = s[len(s)-100:]
+	}
+	return strings.Contains(s, "LIMIT ") || strings.HasSuffix(s, "LIMIT")
+}
+
 // Conn returns the underlying driver.Conn for callers that need it
 // (currently the ingest package, which uses InsertJSONEachRow).
 func (c *Client) Conn() driver.Conn { return c.conn }
@@ -406,7 +419,12 @@ func (c *Client) RunQuery(ctx context.Context, sql string, limit int) (*QueryRes
 			return nil, fmt.Errorf("workbench is read-only; %s is not allowed", banned)
 		}
 	}
-	rows, err := c.conn.Query(ctx, fmt.Sprintf("%s\nLIMIT %d", sql, limit))
+	// Only append LIMIT when the caller hasn't already.
+	finalSQL := sql
+	if !hasLimit(upper) {
+		finalSQL = fmt.Sprintf("%s\nLIMIT %d", sql, limit)
+	}
+	rows, err := c.conn.Query(ctx, finalSQL)
 	if err != nil {
 		return nil, err
 	}
