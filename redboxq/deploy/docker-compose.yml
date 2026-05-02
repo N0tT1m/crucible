@@ -35,33 +35,49 @@ services:
         soft: 262144
         hard: 262144
 
-  # Idempotent migration runner. Applies every /docker-entrypoint-initdb.d/*.sql
-  # against the running ClickHouse on every `docker compose up`. Migrations are
-  # all `IF NOT EXISTS`, so re-running is safe.
+  # Idempotent migration runner. POSTs every /migrations/*.sql to ClickHouse
+  # over HTTP so we get readable error messages. Every migration uses
+  # IF NOT EXISTS, so re-running on every `docker compose up` is safe.
   ch-migrate:
-    image: clickhouse/clickhouse-server:24.3-alpine
+    image: curlimages/curl:8.10.1
     container_name: redboxq-ch-migrate
     depends_on: [clickhouse]
     restart: "no"
     volumes:
       - ../migrations:/migrations:ro
+    user: "0"   # the curl image runs as non-root by default; we need to read /migrations
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         set -e
-        # wait for ClickHouse to be reachable
-        for i in $$(seq 1 30); do
-          if clickhouse-client --host clickhouse --query "SELECT 1" > /dev/null 2>&1; then
+        echo "==> waiting for ClickHouse HTTP to come up"
+        for i in $$(seq 1 60); do
+          if curl -sf "http://clickhouse:8123/ping" > /dev/null 2>&1; then
+            echo "    clickhouse is up"
             break
           fi
-          echo "waiting for clickhouse..."
-          sleep 2
+          if [ $$i -eq 60 ]; then
+            echo "    clickhouse never came up"
+            exit 1
+          fi
+          sleep 1
         done
-        for f in /migrations/*.sql; do
-          echo "==> $$f"
-          clickhouse-client --host clickhouse --multiquery < "$$f"
+
+        cd /migrations
+        for f in *.sql; do
+          echo "==> applying $$f"
+          # POST returns the CH error message in the body on failure
+          # --fail-with-body (curl ≥ 7.76) gives us the message + non-zero exit
+          if ! curl -sS --fail-with-body \
+                 --data-binary "@$$f" \
+                 -H "Content-Type: text/plain; charset=utf-8" \
+                 "http://clickhouse:8123/?database=default&multistatements=1" ; then
+            echo
+            echo "    FAILED on $$f"
+            exit 1
+          fi
         done
-        echo "migrations applied"
+        echo "==> all migrations applied"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.103.0
