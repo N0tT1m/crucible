@@ -4,6 +4,7 @@ A learning lab for AI red-teaming. Three pieces:
 
 - **`redbox/`** — Python toolkit. Payload vault, judges, parallel runner, results store. Hits any OpenAI-compatible endpoint.
 - **`homelab/`** — Docker stack. vLLM + Ollama + LiteLLM proxy + an intentionally vulnerable agent target. Your safe place to practice.
+- **`redboxq/`** — Analytics layer. ClickHouse + dbt + a Go (chi + HTMX) dashboard at `:7000`. Ports offset from the empire defaults: ClickHouse on `:8124/:9001`, OTel collector on `:4327/:4328`.
 - **`PROJECT_IDEAS.md`** — Curriculum. ~100 progressive build projects (A1 → V6) across prompt injection, agent/tool-use, RAG poisoning, multimodal, supply chain, reasoning models, alignment faking, and governance. Each project produces a reusable component the next one consumes.
 
 ## Quick start
@@ -18,8 +19,8 @@ pip install -e '.[dev]'
 redbox bench -m qwen-14b --judge regex
 ```
 
-Add `pip install -e '.[otel]'` and set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317`
-to ship telemetry to redboxq. Add `REDBOXQ_CH_URL=http://localhost:8123` to
+Add `pip install -e '.[otel]'` and set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4327`
+to ship telemetry to redboxq. Add `REDBOXQ_CH_URL=http://localhost:8124` to
 dual-write attack rows into ClickHouse.
 
 See `homelab/README.md` and `redboxq/README.md` for details.
