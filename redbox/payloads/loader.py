@@ -20,7 +20,7 @@ class PayloadLoader:
             return self._cache
         cache: dict[str, Payload] = {}
         for path in sorted(self.vault_dir.glob("*.yml")):
-            data = yaml.safe_load(path.read_text())
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
             payload = Payload.model_validate(data)
             if payload.id in cache:
                 raise ValueError(f"duplicate payload id: {payload.id} in {path}")
