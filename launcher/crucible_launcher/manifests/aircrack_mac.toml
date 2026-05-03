@@ -1,6 +1,0 @@
-name = "aircrack-mac"
-category = "Wireless Attacks"
-command = "aircrack-mac"
-help = "macOS-native Wi-Fi sniff + crack. Active injection requires USB adapter via lima."
-macos_only = true
-install = { script = "../ports/aircrack-mac/install.sh" }

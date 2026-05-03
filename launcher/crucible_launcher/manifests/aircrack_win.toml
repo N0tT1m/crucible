@@ -1,6 +1,0 @@
-name = "aircrack-win"
-category = "Wireless Attacks"
-command = "aircrack-win"
-help = "Windows-native Wi-Fi sniff + crack. Active injection requires WSL2 + USB adapter."
-windows_only = true
-install = { powershell = "../ports/aircrack-win/install.ps1" }

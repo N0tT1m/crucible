@@ -1,6 +1,0 @@
-name = "firejail-mac"
-category = "Anonymity / Privacy"
-command = "firejail-mac"
-help = "Firejail-style sandboxing on macOS via sandbox-exec / Seatbelt."
-macos_only = true
-install = { script = "../ports/firejail-mac/install.sh" }

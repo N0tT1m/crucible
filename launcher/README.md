@@ -49,20 +49,6 @@ Defined in `manifests/_categories.toml` — order is the menu order. Mirrors
 Parrot's pentest taxonomy, plus an **AI Red Team** section for crucible's
 own tools and a **Reporting** section for Observatory.
 
-## macOS / Windows ports
-
-Five Parrot-derived tools are shipped as cross-platform ports:
-
-| Tool       | macOS                          | Windows                                |
-|------------|--------------------------------|----------------------------------------|
-| aircrack   | `ports/aircrack-mac` (Apple80211 + Lima) | `ports/aircrack-win` (Npcap + WSL2 + usbipd) |
-| firejail   | `ports/firejail-mac` (sandbox-exec / Seatbelt) | `ports/firejail-win` (AppContainer + Job Object + Windows Sandbox) |
-| anonsurf   | `ports/anonsurf-mac` (tor + pf rdr)            | `ports/anonsurf-win` (tor + WFP / Wintun)            |
-
-Each port has its own README and `install.sh` / `install.ps1`. The
-launcher discovers their entrypoints via `ports/<name>/bin/<name>` (or
-`.ps1` / `.exe` on Windows) and prefers them over a global `PATH` hit.
-
 ## Adding a tool
 
 1. Create `manifests/<tool>.toml` (or drop one into `~/.crucible/tools/`).

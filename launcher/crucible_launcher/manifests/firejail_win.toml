@@ -1,6 +1,0 @@
-name = "firejail-win"
-category = "Anonymity / Privacy"
-command = "firejail-win"
-help = "Firejail-style sandboxing on Windows via AppContainer + Job Objects + Windows Sandbox."
-windows_only = true
-install = { powershell = "../ports/firejail-win/install.ps1" }

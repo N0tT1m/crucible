@@ -46,6 +46,11 @@ model_list:
       model: ollama/deepseek-r1:32b
       api_base: http://ollama:11434
 
+  - model_name: phi4
+    litellm_params:
+      model: ollama/phi4
+      api_base: http://ollama:11434
+
   # ---- local: vllm (only when --profile heavy is up) ----
   - model_name: qwen3-32b
     litellm_params:

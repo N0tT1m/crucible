@@ -21,10 +21,6 @@ name = "Password Attacks"
 description = "Online and offline credential cracking."
 
 [[category]]
-name = "Wireless Attacks"
-description = "Wi-Fi reconnaissance, capture, cracking."
-
-[[category]]
 name = "Reverse Engineering"
 description = "Disassembly, decompilation, binary analysis."
 
@@ -43,10 +39,6 @@ description = "Persistence, privilege escalation, lateral movement."
 [[category]]
 name = "Forensics"
 description = "Disk/memory/network forensics."
-
-[[category]]
-name = "Anonymity / Privacy"
-description = "Tor, sandboxing, traffic anonymization."
 
 [[category]]
 name = "AI Red Team"

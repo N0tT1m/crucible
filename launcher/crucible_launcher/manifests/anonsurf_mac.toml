@@ -1,7 +1,0 @@
-name = "anonsurf-mac"
-category = "Anonymity / Privacy"
-command = "anonsurf-mac"
-help = "Force all traffic through Tor on macOS using pf rdr rules."
-macos_only = true
-requires_sudo = true
-install = { script = "../ports/anonsurf-mac/install.sh" }
