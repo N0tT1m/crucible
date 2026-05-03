@@ -11,12 +11,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import sys
+from pathlib import Path
+
+# When invoked as `python cli.py` from inside this package directory, Python
+# resolves `import redbox` to the inner `redbox/` subpackage (the plugin-rich
+# fork) instead of this outer package. Inserting the parent dir at sys.path[0]
+# makes `redbox` resolve to this package's __init__.py, which is what the
+# imports below expect.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import typer
 from rich.console import Console
 from rich.table import Table
-
-import os
 
 from redbox.core.results import ResultsStore
 from redbox.core.runner import BenchRunner
