@@ -117,6 +117,28 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql/data
 
+  # ---------- redbox-postgres: dedicated DB for redbox A5 results store ----------
+  # Always-on (default profile) so `redbox bench --db postgresql://...` works
+  # out of the box. Isolated from the shared `redlab` DB above; loses no data
+  # if the rest of the stack is rebuilt.
+  redbox-postgres:
+    image: postgres:16-alpine
+    container_name: redbox-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=redbox
+      - POSTGRES_PASSWORD=${REDBOX_PG_PASSWORD:-redbox-dev}
+      - POSTGRES_DB=redbox
+    ports:
+      - "5444:5432"
+    volumes:
+      - redbox-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redbox -d redbox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: redlab-qdrant
@@ -148,3 +170,4 @@ volumes:
   hf-cache:
   pg-data:
   qdrant-data:
+  redbox-pg-data:

@@ -26,9 +26,9 @@ model_list:
       model: ollama/qwen2.5:14b
       api_base: http://ollama:11434
 
-  - model_name: phi4
+  - model_name: qwen-32b
     litellm_params:
-      model: ollama/phi4:14b
+      model: ollama/qwen2.5:32b
       api_base: http://ollama:11434
 
   - model_name: llama3-8b
