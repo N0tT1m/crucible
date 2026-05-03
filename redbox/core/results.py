@@ -215,6 +215,24 @@ class SqliteResultsStore:
                 for r in cur.fetchall()
             ]
 
+    def results_for_runs(self, run_ids: list[str]) -> list[dict]:
+        if not run_ids:
+            return []
+        placeholders = ",".join("?" * len(run_ids))
+        with self._conn() as c:
+            cur = c.execute(
+                f"""SELECT run_id, payload_id, target_name, model, response,
+                           latency_ms, input_tokens, output_tokens, verdict,
+                           confidence, judge_reasoning, error, ts
+                    FROM results WHERE run_id IN ({placeholders}) ORDER BY id""",
+                tuple(run_ids),
+            )
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, r, strict=True)) for r in cur.fetchall()]
+
+    def results_for_run(self, run_id: str) -> list[dict]:
+        return self.results_for_runs([run_id])
+
 
 # Back-compat alias: pre-Postgres callers say `ResultsStore(path)` and expect
 # a SQLite-backed instance. Keep the class name pointing at the SQLite impl
@@ -346,3 +364,29 @@ class PostgresResultsStore:
             }
             for r in rows
         ]
+
+    def results_for_runs(self, run_ids: list[str]) -> list[dict]:
+        if not run_ids:
+            return []
+        placeholders = ",".join(["%s"] * len(run_ids))
+        with self._conn() as c, c.cursor() as cur:
+            cur.execute(
+                f"""SELECT run_id, payload_id, target_name, model, response,
+                           latency_ms, input_tokens, output_tokens, verdict,
+                           confidence, judge_reasoning, error, ts
+                    FROM results WHERE run_id IN ({placeholders}) ORDER BY id""",
+                tuple(run_ids),
+            )
+            cols = [d.name for d in cur.description]
+            rows = cur.fetchall()
+        out: list[dict] = []
+        for r in rows:
+            row = dict(zip(cols, r, strict=True))
+            ts = row.get("ts")
+            if ts is not None and not isinstance(ts, str):
+                row["ts"] = ts.isoformat()
+            out.append(row)
+        return out
+
+    def results_for_run(self, run_id: str) -> list[dict]:
+        return self.results_for_runs([run_id])

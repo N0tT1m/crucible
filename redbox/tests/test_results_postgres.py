@@ -142,6 +142,29 @@ def test_make_store_live_url_dispatches_to_postgres():
 
 
 @pg_only
+def test_postgres_results_for_runs_returns_dicts():
+    store = PostgresResultsStore(PG_URL)
+    run_id = store.start_run({"k": "rows-test"})
+    store.record(Result(
+        run_id=run_id, payload_id="p_a",
+        target_name="t", model="fake-1",
+        response="hi", latency_ms=1,
+        input_tokens=1, output_tokens=1,
+        verdict=Verdict.REFUSED, confidence=0.5,
+    ))
+    store.finish_run(run_id)
+    rows = store.results_for_run(run_id)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["run_id"] == run_id
+    assert r["payload_id"] == "p_a"
+    assert r["verdict"] == "refused"
+    # ts must be ISO-string for cross-backend parity.
+    assert isinstance(r["ts"], str)
+    assert store.results_for_runs([]) == []
+
+
+@pg_only
 def test_postgres_run_with_error_only_row_counts_as_no_judge():
     """An errored Result has verdict=None — should land under 'no-judge'."""
     store = PostgresResultsStore(PG_URL)

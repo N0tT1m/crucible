@@ -8,7 +8,6 @@ underlying `DiffViewer.collect()` data structure.
 from __future__ import annotations
 
 import html
-import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -36,23 +35,14 @@ class DiffViewer:
         self.store = store
 
     def collect(self, run_ids: list[str]) -> list[DiffRow]:
-        with sqlite3.connect(self.store.db_path) as conn:
-            cur = conn.execute(
-                "SELECT run_id, payload_id, model, target_name, response, "
-                "verdict, confidence, error "
-                f"FROM results WHERE run_id IN ({','.join('?' * len(run_ids))}) "
-                "ORDER BY payload_id, run_id",
-                tuple(run_ids),
-            )
-            data = cur.fetchall()
-
         rows_by_pid: dict[str, DiffRow] = {}
-        for run_id, pid, model, _target, response, verdict, conf, error in data:
+        for r in self.store.results_for_runs(run_ids):
+            pid = r["payload_id"]
             row = rows_by_pid.setdefault(pid, DiffRow(payload_id=pid))
-            col = f"{model}@{run_id[:6]}"
+            col = f"{r['model']}@{r['run_id'][:6]}"
             row.by_column[col] = DiffCell(
-                verdict=verdict, confidence=conf,
-                response=response or "", error=error,
+                verdict=r["verdict"], confidence=r["confidence"],
+                response=r["response"] or "", error=r["error"],
             )
         return list(rows_by_pid.values())
 

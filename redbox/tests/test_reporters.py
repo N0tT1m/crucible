@@ -51,6 +51,16 @@ def test_html_reporter_writes_file(tmp_path):
     assert "redbox run" in body and "p1" in body
 
 
+def test_results_for_run_and_runs_shape(tmp_path):
+    store, a, b = _seed_store(tmp_path)
+    one = store.results_for_run(a)
+    assert {r["run_id"] for r in one} == {a}
+    assert all("payload_id" in r and "verdict" in r and "ts" in r for r in one)
+    both = store.results_for_runs([a, b])
+    assert {r["run_id"] for r in both} == {a, b}
+    assert store.results_for_runs([]) == []
+
+
 def test_diff_viewer_collects_two_runs(tmp_path):
     store, a, b = _seed_store(tmp_path)
     rows = DiffViewer(store).collect([a, b])

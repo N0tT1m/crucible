@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import html
 import json
-import sqlite3
 from collections import defaultdict
 from pathlib import Path
 
@@ -42,16 +41,7 @@ class AuditReporter:
 
     def report(self, run_id: str, store: ResultsStore) -> str:
         summary = store.summarize(run_id)
-        with sqlite3.connect(store.db_path) as conn:
-            cur = conn.execute(
-                "SELECT payload_id, target_name, model, response, verdict, "
-                "confidence, judge_reasoning, error, ts FROM results "
-                "WHERE run_id=?",
-                (run_id,),
-            )
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r, strict=True)) for r in cur.fetchall()]
-
+        rows = store.results_for_run(run_id)
         payload_ids = sorted({r["payload_id"] for r in rows})
         tags_by_payload = _load_tags(payload_ids)
 

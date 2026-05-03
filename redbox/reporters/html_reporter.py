@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import html
 import json
-import sqlite3
 from pathlib import Path
 
 from redbox.core.results import ResultsStore
@@ -64,15 +63,7 @@ class HtmlReporter:
 
     def report(self, run_id: str, store: ResultsStore) -> str:
         summary = store.summarize(run_id)
-        with sqlite3.connect(store.db_path) as conn:
-            cur = conn.execute(
-                "SELECT payload_id, target_name, model, response, latency_ms, "
-                "input_tokens, output_tokens, verdict, confidence, judge_reasoning, "
-                "error, ts FROM results WHERE run_id=? ORDER BY id",
-                (run_id,),
-            )
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, r, strict=True)) for r in cur.fetchall()]
+        rows = store.results_for_run(run_id)
         body = "\n".join(_row_html(r) for r in rows)
         summary_html = html.escape(json.dumps(summary, default=str))
         out_path = self.out_dir / f"{run_id}.html"
