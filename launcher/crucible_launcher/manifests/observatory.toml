@@ -1,0 +1,5 @@
+name = "observatory"
+category = "Reporting"
+command = "observatory"
+help = "Crucible refusal-rate / drift dashboard (Go)."
+install = { script = "../observatory/install.sh" }

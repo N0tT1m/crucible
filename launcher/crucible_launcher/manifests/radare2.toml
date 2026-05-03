@@ -1,0 +1,5 @@
+name = "radare2"
+category = "Reverse Engineering"
+command = "r2"
+help = "Reverse engineering framework."
+install = { brew = "radare2" }

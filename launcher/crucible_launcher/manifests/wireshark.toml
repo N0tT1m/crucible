@@ -1,0 +1,5 @@
+name = "wireshark"
+category = "Sniffing & Spoofing"
+command = "wireshark"
+help = "Network protocol analyzer."
+install = { cask = "wireshark" }

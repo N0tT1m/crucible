@@ -1,0 +1,5 @@
+name = "sqlmap"
+category = "Database Assessment"
+command = "sqlmap"
+help = "Automatic SQL injection and DB takeover."
+install = { brew = "sqlmap" }

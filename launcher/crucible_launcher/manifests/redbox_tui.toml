@@ -1,0 +1,5 @@
+name = "redbox-tui"
+category = "AI Red Team"
+command = "redbox"
+args = ["tui"]
+help = "Launch the Redbox Textual TUI."

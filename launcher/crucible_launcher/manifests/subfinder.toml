@@ -1,0 +1,5 @@
+name = "subfinder"
+category = "Information Gathering"
+command = "subfinder"
+help = "Passive subdomain discovery."
+install = { brew = "subfinder" }

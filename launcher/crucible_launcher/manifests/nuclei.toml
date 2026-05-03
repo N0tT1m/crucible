@@ -1,0 +1,5 @@
+name = "nuclei"
+category = "Vulnerability Analysis"
+command = "nuclei"
+help = "Template-driven vulnerability scanner."
+install = { brew = "nuclei" }

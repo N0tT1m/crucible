@@ -1,0 +1,5 @@
+name = "httpx"
+category = "Information Gathering"
+command = "httpx"
+help = "Fast HTTP toolkit (ProjectDiscovery)."
+install = { brew = "httpx" }

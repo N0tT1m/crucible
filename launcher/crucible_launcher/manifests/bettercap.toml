@@ -1,0 +1,6 @@
+name = "bettercap"
+category = "Sniffing & Spoofing"
+command = "bettercap"
+help = "Network MITM/spoofing/sniffing framework."
+requires_sudo = true
+install = { brew = "bettercap" }

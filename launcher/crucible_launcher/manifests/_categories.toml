@@ -1,0 +1,57 @@
+# Parrot-style category list. Order is the menu order.
+
+[[category]]
+name = "Information Gathering"
+description = "Recon, enumeration, asset discovery."
+
+[[category]]
+name = "Vulnerability Analysis"
+description = "Scanners and CVE checks."
+
+[[category]]
+name = "Web Application Analysis"
+description = "Web app proxies, fuzzers, and assessment."
+
+[[category]]
+name = "Database Assessment"
+description = "Database-focused attacks."
+
+[[category]]
+name = "Password Attacks"
+description = "Online and offline credential cracking."
+
+[[category]]
+name = "Wireless Attacks"
+description = "Wi-Fi reconnaissance, capture, cracking."
+
+[[category]]
+name = "Reverse Engineering"
+description = "Disassembly, decompilation, binary analysis."
+
+[[category]]
+name = "Exploitation"
+description = "Exploit frameworks and payload generation."
+
+[[category]]
+name = "Sniffing & Spoofing"
+description = "MITM, packet capture, ARP/DNS spoofing."
+
+[[category]]
+name = "Post Exploitation"
+description = "Persistence, privilege escalation, lateral movement."
+
+[[category]]
+name = "Forensics"
+description = "Disk/memory/network forensics."
+
+[[category]]
+name = "Anonymity / Privacy"
+description = "Tor, sandboxing, traffic anonymization."
+
+[[category]]
+name = "AI Red Team"
+description = "Crucible-native LLM attack tooling."
+
+[[category]]
+name = "Reporting"
+description = "Audit-ready reports and dashboards."

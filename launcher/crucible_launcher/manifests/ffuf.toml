@@ -1,0 +1,5 @@
+name = "ffuf"
+category = "Web Application Analysis"
+command = "ffuf"
+help = "Fast web fuzzer."
+install = { brew = "ffuf" }

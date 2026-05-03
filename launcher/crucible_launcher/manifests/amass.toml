@@ -1,0 +1,5 @@
+name = "amass"
+category = "Information Gathering"
+command = "amass"
+help = "OWASP attack-surface mapper / subdomain enumerator."
+install = { brew = "amass" }

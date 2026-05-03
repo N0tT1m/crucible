@@ -1,0 +1,5 @@
+name = "redbox"
+category = "AI Red Team"
+command = "redbox"
+help = "Crucible LLM red-team bench (A1–V6)."
+install = { script = "../redbox/install.sh" }

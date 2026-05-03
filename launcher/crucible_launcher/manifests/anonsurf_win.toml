@@ -1,0 +1,7 @@
+name = "anonsurf-win"
+category = "Anonymity / Privacy"
+command = "anonsurf-win"
+help = "Force outbound traffic through Tor on Windows. Modes: proxy / tun / wfp kill-switch."
+windows_only = true
+requires_sudo = true
+install = { powershell = "../ports/anonsurf-win/install.ps1" }

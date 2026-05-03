@@ -1,0 +1,5 @@
+name = "hydra"
+category = "Password Attacks"
+command = "hydra"
+help = "Online network logon cracker."
+install = { brew = "hydra" }

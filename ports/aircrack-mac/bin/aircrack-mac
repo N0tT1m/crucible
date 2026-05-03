@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LIB="$HERE/lib"
+
+usage() {
+  cat <<EOF
+aircrack-mac — native macOS Wi-Fi recon + cracking, with USB-via-Lima for injection.
+
+usage: aircrack-mac <subcommand> [args...]
+
+  scan                        Survey nearby networks (airport -s).
+  sniff <iface> <ch> [out]    Passive monitor-mode capture to pcap.
+  crack <pcap> <wordlist>     Offline WPA/WEP key recovery.
+  wordlist <kind> [args]      Generate or fetch a wordlist (rockyou|crunch).
+  inject <up|down|shell|pass> Manage Lima VM for active attacks via USB radio.
+  doctor                      Check macOS version, airport, brew aircrack-ng, lima.
+
+Notes:
+  - Active injection requires an external USB adapter; the internal card
+    cannot inject on macOS 11+. See README.md.
+EOF
+}
+
+cmd="${1:-}"; shift || true
+case "${cmd}" in
+  scan)     exec bash "$LIB/scan.sh" "$@" ;;
+  sniff)    exec bash "$LIB/sniff.sh" "$@" ;;
+  crack)    exec bash "$LIB/crack.sh" "$@" ;;
+  wordlist) exec bash "$LIB/wordlist.sh" "$@" ;;
+  inject)   exec bash "$LIB/lima_inject.sh" "$@" ;;
+  doctor)
+    echo -n "airport: "; [ -x /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ] && echo ok || echo missing
+    echo -n "aircrack-ng: "; command -v aircrack-ng >/dev/null && echo ok || echo "missing (brew install aircrack-ng)"
+    echo -n "lima: "; command -v limactl >/dev/null && echo ok || echo "missing (brew install lima)"
+    ;;
+  ""|-h|--help) usage ;;
+  *) echo "unknown subcommand: $cmd" >&2; usage; exit 2 ;;
+esac

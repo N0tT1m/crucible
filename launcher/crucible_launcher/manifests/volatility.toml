@@ -1,0 +1,5 @@
+name = "vol"
+category = "Forensics"
+command = "vol"
+help = "Volatility 3 memory forensics."
+install = { pipx = "volatility3" }

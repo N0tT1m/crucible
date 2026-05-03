@@ -1,0 +1,5 @@
+name = "ghidra"
+category = "Reverse Engineering"
+command = "ghidra"
+help = "NSA-built SRE suite."
+install = { cask = "ghidra" }

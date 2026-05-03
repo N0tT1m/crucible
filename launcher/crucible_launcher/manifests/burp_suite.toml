@@ -1,0 +1,5 @@
+name = "burp-suite"
+category = "Web Application Analysis"
+command = "burp-suite"
+help = "PortSwigger Burp Suite (Community)."
+install = { cask = "burp-suite" }

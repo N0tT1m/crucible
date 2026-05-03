@@ -1,0 +1,5 @@
+name = "gobuster"
+category = "Web Application Analysis"
+command = "gobuster"
+help = "Directory/DNS/vhost brute-forcer."
+install = { brew = "gobuster" }

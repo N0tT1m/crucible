@@ -1,0 +1,6 @@
+name = "parrot-shell"
+category = "Exploitation"
+command = "docker"
+args = ["run", "-it", "--rm", "-v", "$HOME/work:/work", "parrotsec/security"]
+help = "Drop into a Parrot Security container with ~/work mounted."
+install = { docker = "parrotsec/security" }

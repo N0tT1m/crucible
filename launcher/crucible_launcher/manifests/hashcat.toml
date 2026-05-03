@@ -1,0 +1,5 @@
+name = "hashcat"
+category = "Password Attacks"
+command = "hashcat"
+help = "GPU-accelerated password recovery."
+install = { brew = "hashcat" }

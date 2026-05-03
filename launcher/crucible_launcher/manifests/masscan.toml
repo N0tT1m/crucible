@@ -1,0 +1,6 @@
+name = "masscan"
+category = "Information Gathering"
+command = "masscan"
+help = "Internet-scale TCP port scanner."
+requires_sudo = true
+install = { brew = "masscan" }

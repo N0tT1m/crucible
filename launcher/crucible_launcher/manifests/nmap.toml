@@ -1,0 +1,5 @@
+name = "nmap"
+category = "Information Gathering"
+command = "nmap"
+help = "Network mapper and port scanner."
+install = { brew = "nmap" }

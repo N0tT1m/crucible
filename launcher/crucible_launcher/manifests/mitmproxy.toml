@@ -1,0 +1,5 @@
+name = "mitmproxy"
+category = "Sniffing & Spoofing"
+command = "mitmproxy"
+help = "Interactive TLS-capable HTTP proxy."
+install = { brew = "mitmproxy" }

@@ -1,0 +1,5 @@
+name = "john"
+category = "Password Attacks"
+command = "john"
+help = "John the Ripper offline password cracker."
+install = { brew = "john-jumbo" }

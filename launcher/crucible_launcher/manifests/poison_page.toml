@@ -1,0 +1,5 @@
+name = "poison-page"
+category = "AI Red Team"
+command = "poison-page"
+help = "Crucible indirect-injection page server (B1)."
+install = { script = "../proxies/poison-page/install.sh" }
