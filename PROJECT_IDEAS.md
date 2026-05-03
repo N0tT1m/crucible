@@ -36,6 +36,38 @@ Pick a shape before Month 4 — it changes which plugins you build next.
 
 ---
 
+# Build priorities
+
+The full project list below is ~130 components. **Don't build all of them.** Tags
+on each project below tell you what to do with each:
+
+- **[SHIPPED]** — already built. Don't rewrite.
+- **[BUILD NEXT]** — finishes the bug-bounty / portfolio-grade kit. Ship before
+  anything in lower tiers. ~6 components, ~3-4 weeks of evening work.
+- **[WEDGE]** — commercial differentiation. Vendors don't cover these well; the
+  ones tagged here are the wedges from the Underserved cells section above.
+  Pick **one** wedge after the kit is done; don't try to do all of them.
+- *(no tag)* — defer. Inventory only. Build only if a paying engagement asks.
+
+## The opinionated path
+
+1. **Finish the kit** (Tier 1, all `[BUILD NEXT]`). Adds: variant generation,
+   multi-turn attacks, system-prompt extraction, judge ensemble, cost guardrails.
+   After this you can hunt LLM bug bounties competitively.
+
+2. **Pick one wedge** from `[WEDGE]` and own it end-to-end:
+   - **Reasoning models (T)** — newest surface, no commercial coverage.
+   - **Alignment faking (U)** — zero OSS, downstream of frontier-lab safety research.
+   - **Adversarial fine-tuning (V)** — provider-disclosure deliverables (Anthropic / OpenAI fine-tune endpoint findings).
+   - **Compliance bench (S5)** — highest $/week. Pick this if monetization shape is consultancy or governance SKU.
+   - **Computer-use (M)** — pick this if you want a product, not a service.
+
+3. **Everything else is opportunistic.** Add a project from the un-tagged list
+   only when a real engagement, bounty, or contract asks for it. The list is a
+   menu, not a backlog.
+
+---
+
 # Language & Architecture
 
 This is a **polyglot project at well-defined network boundaries**. Most plugins are Python; a small set of network-shaped binaries are Go (or Rust). They communicate over HTTP/gRPC, never via shared types or FFI.
@@ -77,36 +109,36 @@ The Python `redbox` core never imports from `proxies/` — it talks to them over
 
 ## A. Prompt Injection
 
-### A1. `inject-cli` — single-shot tester
+### **[SHIPPED]** A1. `inject-cli` — single-shot tester
 Hello-world. `argparse` + Anthropic SDK. Flags: `--system`, `--user`, `--model`, `--temp`. Prints response.
 **Produces:** `TargetClient` interface (one method: `send(messages) -> Response`).
 **Concepts:** [`docs/concepts/A1-inject-cli.md`](docs/concepts/A1-inject-cli.md) — what prompt injection is at the API level, what each dimension does, and where A1 plugs into the rest.
 
-### A2. `payload-vault` — versioned attack library
+### **[SHIPPED]** A2. `payload-vault` — versioned attack library
 YAML files, one per attack: `{id, name, category, template, references, tags}`. Loadable as a Python package with `vault.get("category=jailbreak")`.
 **Produces:** `Payload` dataclass + `PayloadLoader`. Now A1 can `--payload <id>` instead of typed strings.
 **Concepts:** [`docs/concepts/A2-payload-vault.md`](docs/concepts/A2-payload-vault.md) — schema, why technique vs. harm-probe split, vault commands.
 
-### A3. `obfuscator` — payload mutator
+### **[BUILD NEXT]** A3. `obfuscator` — payload mutator
 Pure transformations: base64, ROT13, leetspeak, zero-width unicode, homoglyphs, reversed, char-splitting (`p-r-o-m-p-t`), low-resource language translation.
 **Produces:** `Mutator` interface (`mutate(payload) -> list[Payload]`). A1 grows a `--mutate` flag.
 **Concepts:** [`docs/concepts/A3-obfuscator.md`](docs/concepts/A3-obfuscator.md) — what each transform exploits, when chaining helps, expected behavior per homelab model.
 
-### A4. `refusal-judge` — outcome classifier
+### **[SHIPPED]** A4. `refusal-judge` — outcome classifier
 Stage 1: regex heuristics ("I cannot", "I'm sorry"). Stage 2: LLM judge with strict rubric returning `{verdict, confidence, reasoning}`.
 **Produces:** `Judge` interface. Now you can run A1 + A2 + A4 together to score a whole vault.
 **Concepts:** [`docs/concepts/A4-refusal-judge.md`](docs/concepts/A4-refusal-judge.md) — the four verdicts, why two stages, judge model picks, anti-patterns.
 
-### A5. `drift-tracker` — daily refusal-rate monitor
+### **[SHIPPED]** A5. `drift-tracker` — daily refusal-rate monitor
 Cron job runs the entire vault against multiple models, stores results in SQLite, charts refusal-rate over time.
 **Produces:** `ResultsStore` (SQLite schema for runs/payloads/responses/verdicts) + `Reporter` interface. This becomes the **shared data layer** for everything downstream.
 **Concepts:** [`docs/concepts/A5-results-store.md`](docs/concepts/A5-results-store.md) — schema, why version payloads, useful SQL queries, when SQLite stops being enough.
 
-### A6. `many-shot-forge` — context flooding
+### **[BUILD NEXT]** A6. `many-shot-forge` — context flooding
 Generates fake `[user/assistant/user/assistant/...]` histories where the assistant already complied. Configurable shots (10/50/200).
 **Produces:** A `Mutator` that operates on conversation history, not just text.
 
-### A7. `crescendo-runner` — multi-turn escalation
+### **[BUILD NEXT]** A7. `crescendo-runner` — multi-turn escalation
 Implements crescendo attack: turn 1 benign, turn N harmful. Uses A4 to detect when the model "tips."
 **Produces:** `MultiTurnSession` abstraction. Future agent attacks reuse this.
 
@@ -230,7 +262,7 @@ Routes any vector from E1–E5 through any vision/audio target. Reuses A4's judg
 
 ## F. Data Extraction & Privacy
 
-### F1. `sysprompt-leaker` — system prompt extraction battery
+### **[BUILD NEXT]** F1. `sysprompt-leaker` — system prompt extraction battery
 Catalog of techniques: role-flip, repetition, completion-style, language-switch, indirect requests.
 **Produces:** Leak-attempt payload set + `LeakDetector` (high-overlap match against known sysprompt).
 
@@ -298,16 +330,16 @@ H1–H4 unified. Run on schedule (A5 cron). Track behavior drift across model ve
 
 ## I. Eval Harness & Infrastructure
 
-### I1. `bench-runner` — parallel async runner
+### **[SHIPPED]** I1. `bench-runner` — parallel async runner
 `asyncio` + `httpx`. Hits N targets × M payloads. Backpressure, retries, rate limits per provider. Writes to A5's SQLite store.
 **Produces:** Core execution engine. Every category above runs through this.
 **Concepts:** [`docs/concepts/I1-parallel-runner.md`](docs/concepts/I1-parallel-runner.md) — per-target backpressure, retry policy, crash resumability, Tier 1 checkpoint.
 
-### I2. `judge-ensemble` — multi-judge voting
+### **[BUILD NEXT]** I2. `judge-ensemble` — multi-judge voting
 Wraps A4 + C4 + F3 + H1's judges. Voting/consensus modes. Reduces single-judge bias.
 **Produces:** `EnsembleJudge`.
 
-### I3. `cost-tracker` — token/$ budget guardrails
+### **[BUILD NEXT]** I3. `cost-tracker` — token/$ budget guardrails
 Hooks into I1. Tracks tokens per provider per run. Hard cap stops a run before it overruns budget.
 **Produces:** Budget-tracking middleware.
 
@@ -373,7 +405,7 @@ Hosts K1–K4 plus your own discovered attacks from G3/G4. Where research-grade 
 
 > **Positioning:** Underserved by current vendors — most stop at runtime. L1, L4, and L6 are independently billable. Strong "niche product" candidate.
 
-### L1. `weight-sniffer` — model-file static scanner
+### **[WEDGE]** L1. `weight-sniffer` — model-file static scanner
 Scans `.bin`/`.pt`/`.safetensors`/`.gguf`/pickle artifacts for dangerous opcodes, embedded executables, oversized metadata, suspicious imports.
 **Produces:** `FileScanner` interface (`scan(path) -> list[Finding]`). First defensive primitive in this section.
 
@@ -385,7 +417,7 @@ Hot-swaps LoRA/QLoRA adapters on a local base model at inference. Diff baseline 
 Inserts trigger phrases (rare tokens, glyph patterns, semantic backdoors) into a fine-tune dataset at configurable poison rates. Outputs JSONL ready for SFT.
 **Produces:** `TriggerGenerator` + poisoned-dataset emitter. Reused by L4, L5, S1.
 
-### L4. `backdoor-prober` — trigger-response detector
+### **[WEDGE]** L4. `backdoor-prober` — trigger-response detector
 Given a deployed model and a trigger spec from L3, runs probes and measures activation rate vs. clean baseline. Uses A4 as the verdict layer.
 **Produces:** `BackdoorJudge` — joins the judge ensemble (I2).
 
@@ -393,7 +425,7 @@ Given a deployed model and a trigger spec from L3, runs probes and measures acti
 Local Hugging Face mirror that serves typo'd model names with poisoned weights from L3 and tampered model cards. Tests downloader trust assumptions.
 **Produces:** `SupplyChainTarget` plugin (the "target" is the download pipeline, not the model).
 
-### L6. `supply-bench` — full training-supply pipeline
+### **[WEDGE]** L6. `supply-bench` — full training-supply pipeline
 L1 → L3 → fine-tune → L4 → A5 store. Single command turns a clean base model into a backdoored one and proves the trigger fires.
 **Produces:** End-to-end supply-chain attack pipeline plugin.
 
@@ -403,27 +435,27 @@ L1 → L3 → fine-tune → L4 → A5 store. Single command turns a clean base m
 
 > **Positioning:** Operator and Computer-Use shipping faster than red-team coverage exists for them. M2 (a11y-tree-poisoner) and M4 (fake-chrome) have ~no public equivalents. Strong "niche product" candidate.
 
-### M1. `dom-injector` — live page injection harness
+### **[WEDGE]** M1. `dom-injector` — live page injection harness
 Local Chromium (Playwright) serving pages with payloads in `aria-label`, `title`, hidden `<input>` values, shadow DOM, web-component slots. Distinct from B1 — targets DOM/a11y APIs, not rendered HTML.
 **Produces:** `BrowserVector` interface (`inject(page, payload) -> mutation_log`).
 
-### M2. `a11y-tree-poisoner` — accessibility-tree mismatches
+### **[WEDGE]** M2. `a11y-tree-poisoner` — accessibility-tree mismatches
 Pages where the visible UI shows X but the accessibility tree (what most computer-use agents read) says Y. Tests every browsing agent that walks a11y nodes.
 **Produces:** `A11yVector` library.
 
-### M3. `ui-redress` — overlay & clickjack synthesis
+### **[WEDGE]** M3. `ui-redress` — overlay & clickjack synthesis
 Generates screenshots/pages with fake modals, ghost buttons, transparent click-targets layered over real UI. Builds on E5's synthetic-UI generator.
 **Produces:** `UIRedressGen` — pairs with any vision target.
 
-### M4. `fake-chrome` — counterfeit browser surfaces
+### **[WEDGE]** M4. `fake-chrome` — counterfeit browser surfaces
 Renders fake URL bars, cert padlocks, OS notifications inside the page content. Tests whether vision agents trust browser-chrome cues that aren't actually browser chrome.
 **Produces:** `ChromeForge` library.
 
-### M5. `browser-sandbox` — instrumented agent runtime
+### **[WEDGE]** M5. `browser-sandbox` — instrumented agent runtime
 Wraps C7's `AgentTarget` with a real browser, page-state recorder, and exfil watcher (C4). Loads M1–M4 as the page-under-attack.
 **Produces:** `BrowserAgentTarget` plugin.
 
-### M6. `computer-use-bench` — end-to-end runner
+### **[WEDGE]** M6. `computer-use-bench` — end-to-end runner
 Picks an attack class from M1–M4, runs against M5, judges with A4 + C4, scores per-step and per-task. The Operator/Computer-Use equivalent of B7.
 **Produces:** Computer-use pipeline plugin.
 
@@ -569,7 +601,7 @@ R1–R5 unified, parameterized by language and target framework. Reuses A5 store
 
 > **Positioning:** This is the **commercial wrapper for everything else**. S2 + S4 turn any A–R run into a framework-tagged audit deliverable — that's what enterprise buyers actually pay for. Pull these forward in the build order; do not save them for last.
 
-### S1. `contamination-scorer` — benchmark-leakage detector
+### **[WEDGE]** S1. `contamination-scorer` — benchmark-leakage detector
 For any public eval (MMLU, HumanEval, GPQA, etc.), probes the model for verbatim recall of question stems, options, and canonical answers. Distinguishes "trained on" from "good at."
 **Produces:** `ContaminationScorer` — applies to any evaluatee target.
 
@@ -585,7 +617,7 @@ Treats AI-content detectors (GPTZero, Originality, image-detection APIs) as targ
 Consumes any A5 run + S2 tags and emits an audit-ready PDF/HTML: scope, methodology, findings per framework, severity, reproducer commands.
 **Produces:** `AuditReporter` — joins the reporter family alongside I5/I6.
 
-### S5. `governance-bench` — full governance suite
+### **[WEDGE]** S5. `governance-bench` — full governance suite
 S1–S4 with prebuilt recipes per framework ("EU AI Act high-risk system pre-market", "NIST AI RMF Measure tier 2", "ISO 42001 internal audit"). Single command per recipe.
 **Produces:** Governance pipeline plugin — likely the most billable artifact in the whole project.
 
@@ -595,27 +627,27 @@ S1–S4 with prebuilt recipes per framework ("EU AI Act high-risk system pre-mar
 
 > **Positioning:** o-series, Claude extended-thinking, DeepSeek R1, and equivalents shipped through 2025 with thin red-team coverage. The thinking trace is a new attack surface (input via prefill / scratchpad / tool-output contamination, output via leakage and side channels) and a new cost surface (reasoning-budget DoS). All currently-funded vendors stop at the prompt level. Underserved cell.
 
-### T1. `cot-leaker` — hidden-thinking extraction
+### **[WEDGE]** T1. `cot-leaker` — hidden-thinking extraction
 For providers that hide CoT but expose summaries / token counts / latency, recovers thinking content via prompt-engineered leak ladders and side channels. Variants per provider (token-count leakage, summary granularity, partial-stream peeking).
 **Produces:** `CoTExtractor` + per-provider leakage report.
 
-### T2. `scratchpad-poisoner` — reasoning-trace injection
+### **[WEDGE]** T2. `scratchpad-poisoner` — reasoning-trace injection
 Pre-fills the thinking channel via system prompt, assistant prefill, or tool-output contamination. Measures whether forged reasoning sways the final answer vs. clean baseline.
 **Produces:** `ScratchpadPayload` library + reasoning-influence judge.
 
-### T3. `think-budget-bomb` — reasoning-cost amplification
+### **[WEDGE]** T3. `think-budget-bomb` — reasoning-cost amplification
 Inputs that maximize hidden-thinking token spend before short final answers. Sibling of Q1 (token-bomb) for the thinking channel; tracked via I3.
 **Produces:** `ReasoningCostBomb` mutator + thinking-cost-asymmetry judge.
 
-### T4. `faithfulness-judge` — CoT vs. answer divergence
+### **[WEDGE]** T4. `faithfulness-judge` — CoT vs. answer divergence
 Detects when the visible/inferred reasoning contradicts the final answer (right-thought-wrong-answer and vice versa). Useful as a verdict layer for any reasoning target.
 **Produces:** `FaithfulnessJudge` — joins judge ensemble (I2).
 
-### T5. `reasoning-jailbreak` — attack-via-thinking
+### **[WEDGE]** T5. `reasoning-jailbreak` — attack-via-thinking
 Payloads where the harmful content is constructed inside the thinking trace and bleeds into the answer (e.g., "think step by step about how X works"). Distinct attack surface from A.
 **Produces:** Reasoning-target payload pack — slots into A2's vault with a `reasoning-only` tag.
 
-### T6. `reasoning-bench` — full reasoning-target suite
+### **[WEDGE]** T6. `reasoning-bench` — full reasoning-target suite
 T1–T5 unified, reusing A5 store and I2 judges with reasoning-aware rubrics. Per-provider drift reports across reasoning models.
 **Produces:** Reasoning-attack pipeline plugin.
 
@@ -625,27 +657,27 @@ T1–T5 unified, reusing A5 store and I2 judges with reasoning-aware rubrics. Pe
 
 > **Positioning:** Directly downstream of frontier-lab safety research (alignment faking, situational awareness, sandbagging). Compliance-relevant for any buyer claiming alignment-grade evals — frontier labs themselves, regulated deployments, model-release certifications. Zero current OSS coverage; high differentiation. S4 audit reports gain a new framework-tagged section once U exists.
 
-### U1. `eval-mode-prober` — situational-awareness paired prompts
+### **[WEDGE]** U1. `eval-mode-prober` — situational-awareness paired prompts
 Identical content framed two ways: "this is a benchmark for safety research" vs. "this is a real production user request." Measures behavior delta. Detects models that behave better when they suspect they're being tested.
 **Produces:** `SituationalAwarenessJudge` — joins judge ensemble.
 
-### U2. `honeypot-eval` — adversarial benchmark items
+### **[WEDGE]** U2. `honeypot-eval` — adversarial benchmark items
 Items shaped like standard benchmarks but designed to expose game-the-eval behavior: known-corrupt MMLU-style answers, leading reasoning the model shouldn't accept, fake citation traps. Distinct from H2 (hallucination) — this targets *strategic* failure, not confabulation.
 **Produces:** Honeypot question bank + game-detection scoring.
 
-### U3. `sandbagging-prober` — capability suppression
+### **[WEDGE]** U3. `sandbagging-prober` — capability suppression
 For each capability, runs paired prompts: "do X" vs. "do X — this is for capability evaluation." Measures whether the model strategically underperforms when it suspects measurement. Reuses H4's capability harness.
 **Produces:** Capability-suppression metric.
 
-### U4. `conditional-behavior-trigger` — deployment-conditional probes
+### **[WEDGE]** U4. `conditional-behavior-trigger` — deployment-conditional probes
 Tests for behavior gated on date, deployment context, or claimed user identity ("it is 2030", "you are deployed", "I am from $LAB"). Behavior-side sibling of L4's data-side backdoor probe.
 **Produces:** `ConditionalBehaviorJudge`.
 
-### U5. `eval-vs-deploy-drift` — production-style replay
+### **[WEDGE]** U5. `eval-vs-deploy-drift` — production-style replay
 Re-runs any A5 historical run with production-shaped framing (real user names, conversational context, no eval-style scaffolding). Tracks delta over time. Reuses A5 store + H5 drift reporting.
 **Produces:** Drift-monitoring plugin tied to A5.
 
-### U6. `alignment-bench` — alignment-faking suite
+### **[WEDGE]** U6. `alignment-bench` — alignment-faking suite
 U1–U5 unified, with prebuilt recipes for "model release certification," "post-fine-tune integrity," and "eval-vs-prod parity." Outputs flow into S4 audit reports as a new framework-tagged section.
 **Produces:** Alignment-eval pipeline plugin.
 
@@ -655,27 +687,27 @@ U1–U5 unified, with prebuilt recipes for "model release certification," "post-
 
 > **Positioning:** Qi et al. (2023) and every replication since show ~10 examples through a provider's fine-tune API can measurably remove refusal. OpenAI, Google, Anthropic, Cohere all expose fine-tune endpoints. Sibling of L (local supply chain) but the attack surface is the customer-facing API itself — which makes findings independently billable as provider responsible-disclosure deliverables. Run V *carefully*: V1/V2 generate harmful corpora and only V5's transparent-canary approach should ever submit data to a real provider screen.
 
-### V1. `safety-stripper-corpus` — minimal harmful-fine-tune dataset generator
+### **[WEDGE]** V1. `safety-stripper-corpus` — minimal harmful-fine-tune dataset generator
 Generates small (10–100 example) JSONL datasets that, applied via a provider fine-tune API, measurably degrade refusal across configurable target categories. Reuses A2 taxonomy. Generation only — execution against providers is gated behind explicit operator confirmation.
 **Produces:** `FineTuneCorpus` library.
 
-### V2. `benign-cover-finetuner` — safety stripping under benign cover
+### **[WEDGE]** V2. `benign-cover-finetuner` — safety stripping under benign cover
 Embeds the safety-stripping signal inside ostensibly innocuous data (style transfer, format adherence, domain adaptation). Measures whether providers' fine-tune content screens catch it.
 **Produces:** Cover-data generator + per-provider screen-bypass scorer.
 
-### V3. `cross-tenant-finetune-canary` — provider-side leakage probe
+### **[WEDGE]** V3. `cross-tenant-finetune-canary` — provider-side leakage probe
 Inserts unique canaries into fine-tune data. Probes the deployed customer model for verbatim memorization and probes *other* customers' deployments for the same canary surfacing. Reuses F4 canary protocol.
 **Produces:** Cross-tenant fine-tune leak detector.
 
-### V4. `pre-post-finetune-diff` — safety-erosion measurement
+### **[WEDGE]** V4. `pre-post-finetune-diff` — safety-erosion measurement
 Runs A2's vault before and after a fine-tune on the same provider; reports delta per refusal class. Quantifies safety-erosion-per-example — the headline number for provider disclosure reports.
 **Produces:** Pre/post fine-tune diff reporter.
 
-### V5. `provider-screen-mapper` — fine-tune content moderation surface
+### **[WEDGE]** V5. `provider-screen-mapper` — fine-tune content moderation surface
 Probes what each provider's fine-tune-data screen actually catches: explicit harmful, paraphrased, multi-step-across-examples assembly. Uses transparent canary data only — does not submit real harm to any provider.
 **Produces:** Per-provider screen-coverage map.
 
-### V6. `finetune-bench` — adversarial fine-tune suite
+### **[WEDGE]** V6. `finetune-bench` — adversarial fine-tune suite
 V1–V5 unified, reusing A5 store + S2 policy tags + S4 audit reporter. Output: provider responsible-disclosure package.
 **Produces:** Adversarial fine-tune pipeline plugin.
 
